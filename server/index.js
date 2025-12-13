@@ -20,7 +20,7 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json());
 
-// Serve static files from the built frontend
+// Serve  static files from the built frontend
 app.use(express.static(join(__dirname, '../dist')));
 
 // Health check endpoint
