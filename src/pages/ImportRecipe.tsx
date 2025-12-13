@@ -58,6 +58,7 @@ export default function ImportRecipe() {
             <button
               onClick={() => navigate(-1)}
               className="text-gray-600 hover:text-gray-900"
+              aria-label="Back"
             >
               <ArrowLeft className="h-6 w-6" />
             </button>

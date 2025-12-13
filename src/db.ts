@@ -14,6 +14,22 @@ export class CrumbDB extends Dexie {
       recipes: 'id, title, sourceName, sourceUrl, createdAt, updatedAt',
       sessions: 'recipeId, expiresAt'
     });
+
+    this.version(2)
+      .stores({
+        recipes: 'id, title, category, isFavorite, sourceName, sourceUrl, createdAt, updatedAt',
+        sessions: 'recipeId, expiresAt'
+      })
+      .upgrade(async (tx) => {
+        // Ensure existing cached recipes have a boolean favorite flag
+        await tx.table('recipes').toCollection().modify((r: any) => {
+          if (typeof r.isFavorite !== 'boolean') r.isFavorite = false;
+          if (typeof r.category === 'string') {
+            const trimmed = r.category.trim();
+            r.category = trimmed.length ? trimmed : undefined;
+          }
+        });
+      });
     
     // Check server availability on init
     this.checkServer();

@@ -30,6 +30,15 @@ export type Recipe = {
   author?: string;
   sourceName?: string; // e.g., "The Clever Carrot"
   sourceUrl: string;
+  /**
+   * Optional user-defined category (e.g., "Breakfast", "Dinner", "Desserts", "Drinks").
+   * Free-form so users can add their own.
+   */
+  category?: string;
+  /**
+   * User favorite flag. Favorites are sorted to the top of the library.
+   */
+  isFavorite?: boolean;
   yield?: string;      // e.g., "12 pancakes"
   servings?: number;   // numeric serving size if known
   times?: { prep?: number; cook?: number; total?: number }; // minutes

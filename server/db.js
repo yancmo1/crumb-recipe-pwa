@@ -60,6 +60,8 @@ export async function initDatabase() {
         author TEXT,
         source_name TEXT,
         source_url TEXT NOT NULL,
+        category TEXT,
+        is_favorite BOOLEAN NOT NULL DEFAULT FALSE,
         yield TEXT,
         servings INTEGER,
         times JSONB,
@@ -72,6 +74,10 @@ export async function initDatabase() {
         updated_at BIGINT NOT NULL
       )
     `);
+
+    // Lightweight migrations for existing deployments (CREATE TABLE IF NOT EXISTS won't add new columns)
+    await client.query(`ALTER TABLE recipes ADD COLUMN IF NOT EXISTS category TEXT`);
+    await client.query(`ALTER TABLE recipes ADD COLUMN IF NOT EXISTS is_favorite BOOLEAN NOT NULL DEFAULT FALSE`);
     
     // Create cook sessions table
     await client.query(`
@@ -100,6 +106,14 @@ export async function initDatabase() {
     // Create indexes
     await client.query(`
       CREATE INDEX IF NOT EXISTS idx_recipes_created_at ON recipes(created_at DESC)
+    `);
+
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_recipes_is_favorite ON recipes(is_favorite)
+    `);
+
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_recipes_category ON recipes(category)
     `);
     
     await client.query(`

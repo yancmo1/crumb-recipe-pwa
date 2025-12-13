@@ -201,6 +201,7 @@ export const useRecipeStore = create<RecipeStore>((set, get) => ({
       set({ recipes: [recipe, ...recipes] });
     } catch (error) {
       console.error('Failed to add recipe:', error);
+      throw error;
     }
   },
   
@@ -212,6 +213,7 @@ export const useRecipeStore = create<RecipeStore>((set, get) => ({
       set({ recipes: updatedRecipes });
     } catch (error) {
       console.error('Failed to update recipe:', error);
+      throw error;
     }
   },
   
@@ -223,6 +225,7 @@ export const useRecipeStore = create<RecipeStore>((set, get) => ({
       set({ recipes: recipes.filter(r => r.id !== id) });
     } catch (error) {
       console.error('Failed to delete recipe:', error);
+      throw error;
     }
   },
   
@@ -232,17 +235,30 @@ export const useRecipeStore = create<RecipeStore>((set, get) => ({
   
   getFilteredRecipes: () => {
     const { recipes, searchQuery } = get();
-    if (!searchQuery.trim()) return recipes;
+    const base = !searchQuery.trim()
+      ? recipes
+      : (() => {
+          const query = searchQuery.toLowerCase().trim();
+          return recipes.filter(recipe => 
+            recipe.title.toLowerCase().includes(query) ||
+            recipe.sourceName?.toLowerCase().includes(query) ||
+            recipe.ingredients.some(ing => 
+              ing.raw.toLowerCase().includes(query) ||
+              ing.item?.toLowerCase().includes(query)
+            )
+          );
+        })();
     
-    const query = searchQuery.toLowerCase().trim();
-    return recipes.filter(recipe => 
-      recipe.title.toLowerCase().includes(query) ||
-      recipe.sourceName?.toLowerCase().includes(query) ||
-      recipe.ingredients.some(ing => 
-        ing.raw.toLowerCase().includes(query) ||
-        ing.item?.toLowerCase().includes(query)
-      )
-    );
+    // Favorites to the top, then most recently updated, then title.
+    return [...base].sort((a, b) => {
+      const favA = a.isFavorite ? 1 : 0;
+      const favB = b.isFavorite ? 1 : 0;
+      if (favA !== favB) return favB - favA;
+      const upA = a.updatedAt || 0;
+      const upB = b.updatedAt || 0;
+      if (upA !== upB) return upB - upA;
+      return (a.title || '').localeCompare(b.title || '');
+    });
   }
 }));
 

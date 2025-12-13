@@ -1,6 +1,6 @@
-import { useState, useEffect, useRef } from 'react';
+import { useMemo, useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Clock, Users, Printer, RotateCcw, Plus, Minus, Trash2, Scale, Camera, Upload, Edit3, Check, X, ExternalLink } from 'lucide-react';
+import { ArrowLeft, Clock, Users, Printer, RotateCcw, Plus, Minus, Trash2, Scale, Camera, Upload, Edit3, Check, X, ExternalLink, Star } from 'lucide-react';
 import { toast } from 'sonner';
 import { useRecipeStore, useCookSession } from '../state/session';
 import { scaleIngredients, formatFraction, getMultiplierOptions, getIngredientDisplayAmount } from '../utils/scale';
@@ -32,6 +32,16 @@ export default function RecipeDetail() {
   const [isEditingNotes, setIsEditingNotes] = useState(false);
   const [notesText, setNotesText] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const availableCategories = useMemo(() => {
+    const defaults = ['Breakfast', 'Dinner', 'Desserts', 'Drinks'];
+    const fromRecipes = recipes
+      .map((r) => (typeof r.category === 'string' ? r.category.trim() : ''))
+      .filter((c) => c.length > 0);
+    const all = [...defaults, ...fromRecipes];
+    const uniq = Array.from(new Set(all));
+    return uniq.sort((a, b) => a.localeCompare(b));
+  }, [recipes]);
 
   const isStepGroupHeader = (step: string) => /^\*\*[^*]+:\*\*$/.test(step.trim());
   const formatStepGroupHeader = (step: string) => step.replace(/\*\*/g, '').replace(/:\s*$/, '').trim();
@@ -153,6 +163,49 @@ export default function RecipeDetail() {
     }
   };
 
+  const handleToggleFavorite = async () => {
+    if (!recipe) return;
+
+    const updatedRecipe = {
+      ...recipe,
+      isFavorite: !recipe.isFavorite,
+      updatedAt: Date.now()
+    };
+
+    try {
+      await updateRecipe(updatedRecipe);
+      setRecipe(updatedRecipe);
+    } catch (error) {
+      toast.error('Failed to update favorite');
+    }
+  };
+
+  const handleSetCategory = async (categoryValue: string) => {
+    if (!recipe) return;
+    const nextCategory = categoryValue.trim();
+    const updatedRecipe = {
+      ...recipe,
+      category: nextCategory.length ? nextCategory : undefined,
+      updatedAt: Date.now()
+    };
+
+    try {
+      await updateRecipe(updatedRecipe);
+      setRecipe(updatedRecipe);
+      toast.success('Category updated');
+    } catch (error) {
+      toast.error('Failed to update category');
+    }
+  };
+
+  const handleAddNewCategory = async () => {
+    const name = prompt('New category name (e.g., Lunch):');
+    if (!name) return;
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    await handleSetCategory(trimmed);
+  };
+
   const handlePhotoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file || !recipe) return;
@@ -237,6 +290,7 @@ export default function RecipeDetail() {
               <button
                 onClick={() => navigate('/')}
                 className="text-gray-600 hover:text-gray-900 flex-shrink-0"
+                aria-label="Back to library"
               >
                 <ArrowLeft className="h-6 w-6" />
               </button>
@@ -244,13 +298,28 @@ export default function RecipeDetail() {
                 {recipe.title}
               </h1>
             </div>
-            <button
-              onClick={handleDelete}
-              className="text-gray-400 hover:text-red-500 p-2 -mr-2 flex-shrink-0"
-              title="Delete recipe"
-            >
-              <Trash2 className="h-5 w-5" />
-            </button>
+            <div className="flex items-center gap-1 flex-shrink-0">
+              <button
+                onClick={handleToggleFavorite}
+                className={
+                  recipe.isFavorite
+                    ? 'text-yellow-500 hover:text-yellow-600 p-2'
+                    : 'text-gray-400 hover:text-gray-700 p-2'
+                }
+                title={recipe.isFavorite ? 'Unfavorite' : 'Favorite'}
+                aria-label={recipe.isFavorite ? 'Unfavorite recipe' : 'Favorite recipe'}
+              >
+                <Star className="h-5 w-5" fill={recipe.isFavorite ? 'currentColor' : 'none'} />
+              </button>
+              <button
+                onClick={handleDelete}
+                className="text-gray-400 hover:text-red-500 p-2 -mr-2"
+                title="Delete recipe"
+                aria-label="Delete recipe"
+              >
+                <Trash2 className="h-5 w-5" />
+              </button>
+            </div>
           </div>
         </div>
       </header>
@@ -288,6 +357,7 @@ export default function RecipeDetail() {
                   onClick={triggerPhotoUpload}
                   disabled={isUploadingPhoto}
                   className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-50 rounded-lg transition-all duration-200 flex items-center justify-center opacity-0 group-hover:opacity-100"
+                  aria-label="Change photo"
                 >
                   {isUploadingPhoto ? (
                     <div className="w-8 h-8 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
@@ -304,6 +374,7 @@ export default function RecipeDetail() {
                 onClick={triggerPhotoUpload}
                 disabled={isUploadingPhoto}
                 className="w-full h-48 bg-gray-100 rounded-lg flex flex-col items-center justify-center hover:bg-gray-200 transition-colors border-2 border-dashed border-gray-300 hover:border-gray-400"
+                aria-label="Add photo"
               >
                 {isUploadingPhoto ? (
                   <div className="w-8 h-8 border-2 border-gray-400 border-t-transparent rounded-full animate-spin mb-2"></div>
@@ -324,11 +395,41 @@ export default function RecipeDetail() {
               accept="image/*"
               onChange={handlePhotoUpload}
               className="hidden"
-              capture="environment" // Use camera on mobile
+              aria-label="Upload recipe photo"
             />
           </div>
           
           <h1 className="text-2xl font-bold text-gray-900 mb-2">{recipe.title}</h1>
+
+          {/* Category */}
+          <div className="mb-4 no-print">
+            <label htmlFor="recipe-category" className="block text-sm font-medium text-gray-700 mb-1">
+              Category
+            </label>
+            <div className="flex items-center gap-2">
+              <select
+                id="recipe-category"
+                value={(recipe.category || '').trim()}
+                onChange={(e) => handleSetCategory(e.target.value)}
+                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blueberry focus:border-transparent bg-white text-gray-900"
+              >
+                <option value="">Uncategorized</option>
+                {availableCategories.map((cat) => (
+                  <option key={cat} value={cat}>
+                    {cat}
+                  </option>
+                ))}
+              </select>
+              <button
+                type="button"
+                onClick={handleAddNewCategory}
+                className="px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+                title="Add a new category"
+              >
+                +
+              </button>
+            </div>
+          </div>
           
           <div className="flex items-center flex-wrap gap-x-4 gap-y-1 text-sm text-gray-600 mb-4">
             {recipe.sourceName && (
@@ -472,7 +573,11 @@ export default function RecipeDetail() {
               if (ingredient.isGroupHeader) {
                 return (
                   <h3 key={index} className="text-base font-semibold text-gray-800 mt-4 mb-2 first:mt-0">
-                    {ingredient.raw.replace(/\*\*/g, '').replace(/:/g, '')}
+                    {ingredient.raw
+                      .replace(/\*\*/g, '')
+                      // Only remove a trailing colon (e.g., "Levain:"), keep internal colons like "1:10:10"
+                      .replace(/:\s*$/, '')
+                      .trim()}
                   </h3>
                 );
               }

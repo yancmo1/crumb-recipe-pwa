@@ -20,7 +20,38 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json());
 
-// Serve static files from the built frontend
+function rowToRecipe(row) {
+  return {
+    id: row.id,
+    title: row.title,
+    image: row.image,
+    author: row.author,
+    sourceName: row.source_name,
+    sourceUrl: row.source_url,
+    category: row.category ?? undefined,
+    isFavorite: row.is_favorite ?? false,
+    yield: row.yield,
+    servings: row.servings,
+    times: row.times,
+    ingredients: row.ingredients,
+    steps: row.steps,
+    tips: row.tips,
+    notes: row.notes,
+    nutrition: row.nutrition,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at
+  };
+}
+
+function normalizeRecipeForDb(recipe) {
+  return {
+    ...recipe,
+    category: typeof recipe.category === 'string' ? recipe.category.trim() || null : null,
+    isFavorite: recipe.isFavorite === true
+  };
+}
+
+// Serve  static files from the built frontend
 app.use(express.static(join(__dirname, '../dist')));
 
 // Health check endpoint
@@ -67,7 +98,7 @@ app.post('/api/import', async (req, res) => {
     // Optionally save to database
     if (saveToServer) {
       try {
-        await saveRecipe(recipe);
+        recipe = await saveRecipe(recipe);
         console.log(`✓ Recipe saved to database: ${recipe.id}`);
       } catch (dbError) {
         console.error('Failed to save recipe to database:', dbError);
@@ -96,25 +127,8 @@ app.get('/api/recipes', async (req, res) => {
     const result = await query(
       'SELECT * FROM recipes ORDER BY created_at DESC'
     );
-    
-    const recipes = result.rows.map(row => ({
-      id: row.id,
-      title: row.title,
-      image: row.image,
-      author: row.author,
-      sourceName: row.source_name,
-      sourceUrl: row.source_url,
-      yield: row.yield,
-      servings: row.servings,
-      times: row.times,
-      ingredients: row.ingredients,
-      steps: row.steps,
-      tips: row.tips,
-      notes: row.notes,
-      nutrition: row.nutrition,
-      createdAt: row.created_at,
-      updatedAt: row.updated_at
-    }));
+
+    const recipes = result.rows.map(rowToRecipe);
     
     res.json({ success: true, recipes });
   } catch (error) {
@@ -139,25 +153,7 @@ app.get('/api/recipes/:id', async (req, res) => {
       });
     }
     
-    const row = result.rows[0];
-    const recipe = {
-      id: row.id,
-      title: row.title,
-      image: row.image,
-      author: row.author,
-      sourceName: row.source_name,
-      sourceUrl: row.source_url,
-      yield: row.yield,
-      servings: row.servings,
-      times: row.times,
-      ingredients: row.ingredients,
-      steps: row.steps,
-      tips: row.tips,
-      notes: row.notes,
-      nutrition: row.nutrition,
-      createdAt: row.created_at,
-      updatedAt: row.updated_at
-    };
+    const recipe = rowToRecipe(result.rows[0]);
     
     res.json({ success: true, recipe });
   } catch (error) {
@@ -173,8 +169,8 @@ app.get('/api/recipes/:id', async (req, res) => {
 app.post('/api/recipes', async (req, res) => {
   try {
     const recipe = req.body;
-    await saveRecipe(recipe);
-    res.json({ success: true, recipe });
+    const saved = await saveRecipe(recipe);
+    res.json({ success: true, recipe: saved });
   } catch (error) {
     console.error('Error saving recipe:', error);
     res.status(500).json({
@@ -188,8 +184,26 @@ app.post('/api/recipes', async (req, res) => {
 app.put('/api/recipes/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const recipe = { ...req.body, id, updatedAt: Date.now() };
-    
+
+    // Support partial updates safely by first loading the existing row.
+    const existingRes = await query('SELECT * FROM recipes WHERE id = $1', [id]);
+    if (existingRes.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: 'Recipe not found'
+      });
+    }
+
+    const existing = rowToRecipe(existingRes.rows[0]);
+    const merged = {
+      ...existing,
+      ...req.body,
+      id,
+      createdAt: existing.createdAt,
+      updatedAt: Date.now()
+    };
+    const normalized = normalizeRecipeForDb(merged);
+
     const result = await query(
       `UPDATE recipes SET 
         title = $1,
@@ -197,32 +211,36 @@ app.put('/api/recipes/:id', async (req, res) => {
         author = $3,
         source_name = $4,
         source_url = $5,
-        yield = $6,
-        servings = $7,
-        times = $8,
-        ingredients = $9,
-        steps = $10,
-        tips = $11,
-        notes = $12,
-        nutrition = $13,
-        updated_at = $14
-      WHERE id = $15
+        category = $6,
+        is_favorite = $7,
+        yield = $8,
+        servings = $9,
+        times = $10,
+        ingredients = $11,
+        steps = $12,
+        tips = $13,
+        notes = $14,
+        nutrition = $15,
+        updated_at = $16
+      WHERE id = $17
       RETURNING *`,
       [
-        recipe.title,
-        recipe.image,
-        recipe.author,
-        recipe.sourceName,
-        recipe.sourceUrl,
-        recipe.yield,
-        recipe.servings,
-        JSON.stringify(recipe.times),
-        JSON.stringify(recipe.ingredients),
-        JSON.stringify(recipe.steps),
-        JSON.stringify(recipe.tips),
-        recipe.notes,
-        JSON.stringify(recipe.nutrition),
-        recipe.updatedAt,
+        merged.title,
+        merged.image,
+        merged.author,
+        merged.sourceName,
+        merged.sourceUrl,
+        normalized.category,
+        normalized.isFavorite,
+        merged.yield,
+        merged.servings,
+        JSON.stringify(merged.times),
+        JSON.stringify(merged.ingredients),
+        JSON.stringify(merged.steps),
+        JSON.stringify(merged.tips),
+        merged.notes,
+        JSON.stringify(merged.nutrition),
+        merged.updatedAt,
         id
       ]
     );
@@ -234,7 +252,7 @@ app.put('/api/recipes/:id', async (req, res) => {
       });
     }
     
-    res.json({ success: true, recipe });
+    res.json({ success: true, recipe: rowToRecipe(result.rows[0]) });
   } catch (error) {
     console.error('Error updating recipe:', error);
     res.status(500).json({
@@ -269,17 +287,20 @@ app.delete('/api/recipes/:id', async (req, res) => {
 
 // Helper function to save recipe to database
 async function saveRecipe(recipe) {
-  await query(
+  const normalized = normalizeRecipeForDb(recipe);
+  const result = await query(
     `INSERT INTO recipes (
-      id, title, image, author, source_name, source_url, yield, servings,
+      id, title, image, author, source_name, source_url, category, is_favorite, yield, servings,
       times, ingredients, steps, tips, notes, nutrition, created_at, updated_at
-    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
     ON CONFLICT (id) DO UPDATE SET
       title = EXCLUDED.title,
       image = EXCLUDED.image,
       author = EXCLUDED.author,
       source_name = EXCLUDED.source_name,
       source_url = EXCLUDED.source_url,
+      category = EXCLUDED.category,
+      is_favorite = EXCLUDED.is_favorite,
       yield = EXCLUDED.yield,
       servings = EXCLUDED.servings,
       times = EXCLUDED.times,
@@ -288,7 +309,8 @@ async function saveRecipe(recipe) {
       tips = EXCLUDED.tips,
       notes = EXCLUDED.notes,
       nutrition = EXCLUDED.nutrition,
-      updated_at = EXCLUDED.updated_at`,
+      updated_at = EXCLUDED.updated_at
+    RETURNING *`,
     [
       recipe.id,
       recipe.title,
@@ -296,6 +318,8 @@ async function saveRecipe(recipe) {
       recipe.author,
       recipe.sourceName,
       recipe.sourceUrl,
+      normalized.category,
+      normalized.isFavorite,
       recipe.yield,
       recipe.servings,
       JSON.stringify(recipe.times),
@@ -308,6 +332,8 @@ async function saveRecipe(recipe) {
       recipe.updatedAt
     ]
   );
+
+  return rowToRecipe(result.rows[0]);
 }
 
 async function extractRecipe(url) {

@@ -1,14 +1,31 @@
-import { useState, useEffect } from 'react';
+import { useMemo, useState } from 'react';
 import { useRecipeStore } from '../state/session';
 import { Link } from 'react-router-dom';
-import { Plus, Search, ChefHat, Trash2 } from 'lucide-react';
+import { Plus, Search, ChefHat, Trash2, Star } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function Library() {
-  const { recipes, searchQuery, searchRecipes, getFilteredRecipes, isLoading, deleteRecipe } = useRecipeStore();
+  const { recipes, searchQuery, searchRecipes, getFilteredRecipes, isLoading, deleteRecipe, updateRecipe } = useRecipeStore();
   const [localQuery, setLocalQuery] = useState(searchQuery);
+  const [selectedCategory, setSelectedCategory] = useState<string>('All');
+  const [customCategories, setCustomCategories] = useState<string[]>([]);
 
   const filteredRecipes = getFilteredRecipes();
+
+  const availableCategories = useMemo(() => {
+    const defaults = ['Breakfast', 'Dinner', 'Desserts', 'Drinks'];
+    const fromRecipes = recipes
+      .map((r) => (typeof r.category === 'string' ? r.category.trim() : ''))
+      .filter((c) => c.length > 0);
+    const all = [...defaults, ...customCategories, ...fromRecipes];
+    const uniq = Array.from(new Set(all));
+    return uniq.sort((a, b) => a.localeCompare(b));
+  }, [recipes, customCategories]);
+
+  const visibleRecipes = useMemo(() => {
+    if (selectedCategory === 'All') return filteredRecipes;
+    return filteredRecipes.filter((r) => (r.category || '').trim() === selectedCategory);
+  }, [filteredRecipes, selectedCategory]);
 
   const handleSearch = (query: string) => {
     setLocalQuery(query);
@@ -27,6 +44,33 @@ export default function Library() {
         toast.error('Failed to delete recipe');
       }
     }
+  };
+
+  const handleToggleFavorite = async (e: React.MouseEvent, recipeId: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    const recipe = recipes.find((r) => r.id === recipeId);
+    if (!recipe) return;
+
+    try {
+      await updateRecipe({
+        ...recipe,
+        isFavorite: !recipe.isFavorite,
+        updatedAt: Date.now()
+      });
+    } catch (error) {
+      toast.error('Failed to update favorite');
+    }
+  };
+
+  const handleAddCategory = () => {
+    const name = prompt('New category name (e.g., Lunch):');
+    if (!name) return;
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    setCustomCategories((prev) => (prev.includes(trimmed) ? prev : [...prev, trimmed]));
+    setSelectedCategory(trimmed);
   };
 
   return (
@@ -62,6 +106,31 @@ export default function Library() {
           />
         </div>
 
+        {/* Category filter */}
+        <div className="flex items-center gap-2 mb-6">
+          <select
+            value={selectedCategory}
+            onChange={(e) => setSelectedCategory(e.target.value)}
+            className="flex-1 px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blueberry focus:border-transparent bg-white text-gray-900"
+            aria-label="Filter by category"
+          >
+            <option value="All">All categories</option>
+            {availableCategories.map((cat) => (
+              <option key={cat} value={cat}>
+                {cat}
+              </option>
+            ))}
+          </select>
+          <button
+            type="button"
+            onClick={handleAddCategory}
+            className="px-3 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+            title="Add a new category"
+          >
+            +
+          </button>
+        </div>
+
         {/* Recipe List */}
         {isLoading ? (
           <div className="space-y-4">
@@ -77,7 +146,7 @@ export default function Library() {
               </div>
             ))}
           </div>
-        ) : filteredRecipes.length === 0 ? (
+        ) : visibleRecipes.length === 0 ? (
           <div className="text-center py-12">
             <ChefHat className="h-16 w-16 mx-auto text-gray-400 mb-4" />
             <h3 className="text-lg font-semibold text-gray-600 mb-2">
@@ -101,7 +170,7 @@ export default function Library() {
           </div>
         ) : (
           <div className="space-y-4">
-            {filteredRecipes.map((recipe) => (
+            {visibleRecipes.map((recipe) => (
               <div
                 key={recipe.id}
                 className="bg-white rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow relative group"
@@ -129,6 +198,13 @@ export default function Library() {
                       <p className="text-sm text-gray-600 truncate">
                         {recipe.sourceName || 'Unknown Source'}
                       </p>
+                      {recipe.category && recipe.category.trim() && (
+                        <div className="mt-1">
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-gray-100 text-gray-700">
+                            {recipe.category.trim()}
+                          </span>
+                        </div>
+                      )}
                       <div className="flex items-center space-x-4 mt-1 text-xs text-gray-500">
                         {recipe.yield && (
                           <span>Serves {recipe.yield}</span>
@@ -140,6 +216,19 @@ export default function Library() {
                     </div>
                   </div>
                 </Link>
+
+                {/* Favorite button */}
+                <button
+                  onClick={(e) => handleToggleFavorite(e, recipe.id)}
+                  className={`absolute top-4 right-10 p-1 rounded transition-colors ${
+                    recipe.isFavorite
+                      ? 'text-yellow-500 hover:text-yellow-600'
+                      : 'text-gray-400 hover:text-gray-600 hover:bg-gray-50'
+                  }`}
+                  title={recipe.isFavorite ? 'Unfavorite' : 'Favorite'}
+                >
+                  <Star className="h-4 w-4" fill={recipe.isFavorite ? 'currentColor' : 'none'} />
+                </button>
                 
                 {/* Delete button */}
                 <button

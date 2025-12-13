@@ -103,6 +103,7 @@ export default function Settings() {
             <button
               onClick={() => navigate('/')}
               className="text-gray-600 hover:text-gray-900"
+              aria-label="Back to library"
             >
               <ArrowLeft className="h-6 w-6" />
             </button>
