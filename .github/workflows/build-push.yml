@@ -5,8 +5,12 @@ on:
     branches: [ main ]
     tags:
       - 'v*'
+    paths-ignore:
+      - '**/*.md'
   pull_request:
     branches: [ main ]
+    paths-ignore:
+      - '**/*.md'
 
 env:
   REGISTRY: ghcr.io
@@ -24,12 +28,16 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Set up QEMU
+        # QEMU is only needed for multi-arch builds. PRs build amd64 only for speed.
+        if: ${{ github.event_name != 'pull_request' }}
         uses: docker/setup-qemu-action@v3
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
       - name: Log in to GitHub Container Registry
+        # Only required when pushing images (not for PR validation builds)
+        if: ${{ github.event_name != 'pull_request' }}
         uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
@@ -57,7 +65,9 @@ jobs:
         with:
           context: .
           push: ${{ github.event_name != 'pull_request' }}
-          platforms: linux/amd64,linux/arm64
+          # PRs: build a single architecture quickly.
+          # main/tags: build amd64+arm64 for deployment.
+          platforms: ${{ github.event_name == 'pull_request' && 'linux/amd64' || 'linux/amd64,linux/arm64' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
