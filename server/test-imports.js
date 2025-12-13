@@ -13,6 +13,28 @@ const testUrls = [
     name: 'Pantry Mama - WPRM Plugin',
     expectedPlugin: 'WPRM'
   },
+
+  // Cooked plugin (regular + print)
+  {
+    url: 'https://thebakingnetwork.com/recipes/pumpkin-sourdough-drop-donuts/',
+    name: 'The Baking Network - Cooked Plugin (regular)'
+  },
+  {
+    url: 'https://thebakingnetwork.com/recipes/pumpkin-sourdough-drop-donuts/?print=1',
+    name: 'The Baking Network - Cooked Plugin (print)'
+  },
+
+  // WPRM print endpoint example
+  {
+    url: 'https://www.kitchensanctuary.com/wprm_print/air-fryer-donut-holes-recipe',
+    name: 'Kitchen Sanctuary - WPRM print endpoint'
+  },
+
+  // More common food blog structure
+  {
+    url: 'https://www.acouplecooks.com/classic-margarita/',
+    name: 'A Couple Cooks - Cocktail (redirects)'
+  },
   
   // Multi-section recipes - tests multi-header processing
   {
@@ -20,6 +42,24 @@ const testUrls = [
     name: 'The Clever Carrot - Multi-section',
     expectSections: true
   },
+
+  // Tasty Recipes examples
+  {
+    url: 'https://sallysbakingaddiction.com/chocolate-chip-cookies/',
+    name: 'Sally\'s Baking Addiction - Tasty Recipes'
+  },
+
+  // JSON-LD heavy sites
+  {
+    url: 'https://www.bonappetit.com/recipe/bas-best-chocolate-chip-cookies',
+    name: 'Bon Appetit - JSON-LD heavy'
+  },
+
+  // AllRecipes (JSON-LD)
+  {
+    url: 'https://www.allrecipes.com/recipe/10813/best-chocolate-chip-cookies/',
+    name: 'AllRecipes - JSON-LD'
+  }
   
   // Add more test URLs here
 ];
@@ -41,7 +81,9 @@ async function runTests() {
     
     try {
       const startTime = Date.now();
-      const recipe = await extractRecipeImproved(test.url);
+      const result = await extractRecipeImproved(test.url, { includeDebug: true });
+      const recipe = result.recipe;
+      const debug = result.debug;
       const duration = Date.now() - startTime;
       
       // Validate results
@@ -66,6 +108,9 @@ async function runTests() {
       
       // Display results
       console.log(`\n📊 Results (${duration}ms):`);
+      if (debug?.chosen) {
+        console.log(`   Chosen strategy: ${debug.chosen.name} (score ${debug.chosen.score})`);
+      }
       console.log(`   Title: ${recipe.title?.substring(0, 50)}${recipe.title?.length > 50 ? '...' : ''}`);
       console.log(`   Ingredients: ${recipe.ingredients?.length || 0} ${checks.hasIngredients ? '✓' : '✗'}`);
       console.log(`   Steps: ${recipe.steps?.length || 0} ${checks.hasSteps ? '✓' : '✗'}`);

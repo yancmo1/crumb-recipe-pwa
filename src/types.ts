@@ -59,7 +59,37 @@ export type ImportRequest = {
 export type ImportResponse = {
   success: boolean;
   recipe?: Recipe;
+  debug?: ImportDebugReport;
   error?: string;
+};
+
+// Optional debug info returned by the server during import.
+// This is intentionally lightweight and may change over time.
+export type ImportDebugReport = {
+  requestedUrl: string;
+  fetchedUrl: string;
+  startedAt: number;
+  strategies: Array<{
+    name: string;
+    score: number;
+    metrics?: {
+      titleLen: number;
+      ingredientsCount: number;
+      stepsCount: number;
+      avgStepLength: number;
+      hasImage: boolean;
+      hasAuthor: boolean;
+      hasTimes: boolean;
+      hasYield: boolean;
+    };
+    meta?: Record<string, unknown>;
+  }>;
+  chosen?: {
+    name: string;
+    score: number;
+    durationMs?: number;
+  };
+  warnings: string[];
 };
 
 // Scaling types

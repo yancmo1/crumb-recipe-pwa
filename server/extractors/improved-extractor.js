@@ -16,77 +16,143 @@ import { JSDOM } from 'jsdom';
 import { nanoid } from 'nanoid';
 import { parseIngredients } from '../utils.js';
 import { tryRecipePlugins } from './plugins.js';
+import { normalizeRecipe, scoreRecipeCandidate } from './quality.js';
 
 /**
  * Main extraction orchestrator
+ *
+ * Returns: { recipe, debug }
+ * - recipe: normalized, best-scoring candidate
+ * - debug: strategy scoring info (safe to omit from API response in production)
  */
-export async function extractRecipeImproved(url) {
+export async function extractRecipeImproved(url, options = {}) {
   console.log(`\n=== Starting improved recipe extraction for: ${url} ===`);
-  
+
+  const includeDebug = !!options.includeDebug;
+
+  const debug = {
+    requestedUrl: url,
+    fetchedUrl: url,
+    startedAt: Date.now(),
+    strategies: [],
+    chosen: null,
+    warnings: []
+  };
+
   // Fetch the HTML
   const response = await fetch(url, {
     headers: {
-      'User-Agent': 'Mozilla/5.0 (compatible; CrumbBot/2.0; +https://github.com/user/crumb)'
+      'User-Agent': 'Mozilla/5.0 (compatible; CrumbBot/2.1; +https://github.com/user/crumb)',
+      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+      'Accept-Language': 'en-US,en;q=0.9'
     }
   });
-  
+
   if (!response.ok) {
     throw new Error(`Failed to fetch URL: ${response.status} ${response.statusText}`);
   }
-  
+
+  // undici Response has a .url (final URL after redirects)
+  if (response.url) debug.fetchedUrl = response.url;
+
   const html = await response.text();
   const $ = cheerio.load(html);
-  
+
+  const candidates = [];
+  const STRATEGY_PRIORITY = [
+    'plugin',
+    'merged:jsonld+plugin',
+    'merged:jsonld+print',
+    'merged:jsonld+heuristic',
+    'jsonld',
+    'print',
+    'heuristic'
+  ];
+
+  const addCandidate = (name, recipe, meta = {}) => {
+    if (!recipe) return;
+
+    const normalized = normalizeRecipe(recipe, debug.fetchedUrl);
+    const { score, metrics } = scoreRecipeCandidate(normalized);
+
+    candidates.push({ name, recipe: normalized, score, metrics, meta });
+    debug.strategies.push({ name, score, metrics, meta });
+  };
+
   // Strategy 0: Recipe Plugins (highest success rate)
   console.log('\n--- Strategy 0: Recipe Plugins (WPRM, Tasty, etc.) ---');
-  let recipe = tryRecipePlugins($, url);
-  if (recipe) {
-    console.log(`✓ Plugin extraction successful - ${recipe.steps.length} steps`);
-    return recipe;
+  const pluginRecipe = tryRecipePlugins($, debug.fetchedUrl);
+  if (pluginRecipe) {
+    console.log(`✓ Plugin extraction produced ${pluginRecipe.ingredients?.length || 0} ingredients and ${pluginRecipe.steps?.length || 0} steps`);
+  } else {
+    console.log('✗ No recipe plugins detected');
   }
-  console.log('✗ No recipe plugins detected');
-  
+  addCandidate('plugin', pluginRecipe);
+
   // Strategy 1: Enhanced JSON-LD extraction
   console.log('\n--- Strategy 1: Enhanced JSON-LD ---');
-  const jsonLdData = tryEnhancedJsonLd($, url);
+  const jsonLdData = tryEnhancedJsonLd($, debug.fetchedUrl);
   if (jsonLdData) {
-    console.log(`✓ JSON-LD found: ${jsonLdData.steps?.length || 0} steps`);
-    
-    // Validate JSON-LD quality
-    if (isJsonLdComplete(jsonLdData)) {
-      console.log('✓ JSON-LD appears complete, using it');
-      return jsonLdData;
-    }
-    console.log('⚠ JSON-LD incomplete, will merge with heuristic extraction');
+    console.log(`✓ JSON-LD found: ${jsonLdData.ingredients?.length || 0} ingredients, ${jsonLdData.steps?.length || 0} steps`);
   } else {
     console.log('✗ No JSON-LD found');
   }
-  
+  addCandidate('jsonld', jsonLdData);
+
   // Strategy 2: Print version (cleaner content)
   console.log('\n--- Strategy 2: Print Version ---');
-  const printRecipe = await tryPrintVersionSmart($, url);
-  if (printRecipe && printRecipe.steps?.length >= 3) {
-    console.log(`✓ Print version successful: ${printRecipe.steps.length} steps`);
-    return mergeRecipeData(jsonLdData, printRecipe);
+  const printResult = await tryPrintVersionSmart($, debug.fetchedUrl);
+  if (printResult?.recipe) {
+    console.log(`✓ Print version produced ${printResult.recipe.ingredients?.length || 0} ingredients and ${printResult.recipe.steps?.length || 0} steps`);
+    addCandidate('print', printResult.recipe, { printUrl: printResult.printUrl });
+  } else {
+    console.log('✗ Print version not helpful');
   }
-  console.log('✗ Print version not helpful');
-  
+
   // Strategy 3: Improved heuristic extraction
   console.log('\n--- Strategy 3: Improved Heuristics ---');
-  const heuristicRecipe = tryImprovedHeuristics(html, $, url);
+  const heuristicRecipe = tryImprovedHeuristics(html, $, debug.fetchedUrl);
   if (heuristicRecipe) {
-    console.log(`✓ Heuristic extraction successful: ${heuristicRecipe.steps.length} steps`);
-    return mergeRecipeData(jsonLdData, heuristicRecipe);
+    console.log(`✓ Heuristic extraction produced ${heuristicRecipe.ingredients?.length || 0} ingredients and ${heuristicRecipe.steps?.length || 0} steps`);
+  } else {
+    console.log('✗ Heuristic extraction failed');
   }
-  console.log('✗ Heuristic extraction failed');
-  
-  // If we got here and have partial JSON-LD data, return it
-  if (jsonLdData && (jsonLdData.ingredients?.length > 0 || jsonLdData.steps?.length > 0)) {
-    console.log('⚠ Returning partial JSON-LD data as last resort');
-    return jsonLdData;
+  addCandidate('heuristic', heuristicRecipe);
+
+  // Merge candidates (JSON-LD metadata tends to be accurate; other strategies tend to be complete)
+  if (jsonLdData && pluginRecipe) addCandidate('merged:jsonld+plugin', mergeRecipeData(jsonLdData, pluginRecipe));
+  if (jsonLdData && printResult?.recipe) addCandidate('merged:jsonld+print', mergeRecipeData(jsonLdData, printResult.recipe));
+  if (jsonLdData && heuristicRecipe) addCandidate('merged:jsonld+heuristic', mergeRecipeData(jsonLdData, heuristicRecipe));
+
+  if (candidates.length === 0) {
+    throw new Error('Could not extract recipe from URL');
   }
-  
-  throw new Error('Could not extract recipe from URL');
+
+  // Choose best candidate (score desc, then strategy priority)
+  candidates.sort((a, b) => {
+    if (b.score !== a.score) return b.score - a.score;
+    const ai = STRATEGY_PRIORITY.indexOf(a.name);
+    const bi = STRATEGY_PRIORITY.indexOf(b.name);
+    return (ai === -1 ? 999 : ai) - (bi === -1 ? 999 : bi);
+  });
+
+  const chosen = candidates[0];
+  debug.chosen = {
+    name: chosen.name,
+    score: chosen.score,
+    metrics: chosen.metrics,
+    finishedAt: Date.now(),
+    durationMs: Date.now() - debug.startedAt
+  };
+
+  // Final guardrails
+  if (!chosen.recipe.title) chosen.recipe.title = 'Untitled Recipe';
+  if (!chosen.recipe.sourceUrl) chosen.recipe.sourceUrl = debug.fetchedUrl;
+
+  return {
+    recipe: chosen.recipe,
+    debug: includeDebug ? debug : undefined
+  };
 }
 
 /**
@@ -209,7 +275,8 @@ function tryImprovedHeuristics(html, $, url) {
     image,
     sourceUrl: url,
     sourceName: extractSourceName(url),
-    ingredients: parseIngredients(ingredients.filter(i => typeof i === 'string')),
+    // Keep raw lines (including group headers like **For the sauce:**); normalized later
+    ingredients,
     steps,
     createdAt: now,
     updatedAt: now
@@ -243,8 +310,8 @@ function extractIngredientsWithGroups($) {
       }
       // This is a subsection header (e.g., "For the dough")
       const subheading = currentNode.text().trim();
-      if (subheading && subheading.length < 50) {
-        ingredients.push({ raw: `**${subheading}:**`, isGroupHeader: true });
+      if (subheading && subheading.length < 60) {
+        ingredients.push(`**${subheading}:**`);
       }
     }
     
@@ -267,8 +334,9 @@ function extractIngredientsWithGroups($) {
     currentNode = currentNode.next();
     guard++;
   }
-  
-  return [...new Set(ingredients)].filter(Boolean);
+
+  // Deduplicate strings (headers + lines)
+  return [...new Set(ingredients.map(i => (typeof i === 'string' ? i.trim() : String(i)).trim()))].filter(Boolean);
 }
 
 /**
@@ -376,9 +444,47 @@ async function tryPrintVersionSmart($, url) {
   try {
     const fullPrintUrl = new URL(printUrl, url).toString();
     if (fullPrintUrl === url) return null; // Avoid recursion
-    
+
     console.log(`Trying print version: ${fullPrintUrl}`);
-    return await extractRecipeImproved(fullPrintUrl);
+
+    const response = await fetch(fullPrintUrl, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (compatible; CrumbBot/2.1; +https://github.com/user/crumb)',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.9'
+      }
+    });
+
+    if (!response.ok) {
+      return null;
+    }
+
+    const printHtml = await response.text();
+    const print$ = cheerio.load(printHtml);
+
+    // Only run non-print strategies on the print HTML to avoid nested recursion.
+    const pluginRecipe = tryRecipePlugins(print$, fullPrintUrl);
+    const jsonLd = tryEnhancedJsonLd(print$, fullPrintUrl);
+    const heuristic = tryImprovedHeuristics(printHtml, print$, fullPrintUrl);
+
+    const candidates = [];
+    const add = (name, recipe) => {
+      if (!recipe) return;
+      const normalized = normalizeRecipe(recipe, fullPrintUrl);
+      const { score } = scoreRecipeCandidate(normalized);
+      candidates.push({ name, score, recipe: normalized });
+    };
+
+    add('plugin', pluginRecipe);
+    add('jsonld', jsonLd);
+    add('heuristic', heuristic);
+    if (jsonLd && pluginRecipe) add('merged:jsonld+plugin', mergeRecipeData(jsonLd, pluginRecipe));
+    if (jsonLd && heuristic) add('merged:jsonld+heuristic', mergeRecipeData(jsonLd, heuristic));
+
+    if (candidates.length === 0) return null;
+
+    candidates.sort((a, b) => b.score - a.score);
+    return { recipe: candidates[0].recipe, printUrl: fullPrintUrl };
   } catch (error) {
     console.warn('Print version failed:', error.message);
     return null;
