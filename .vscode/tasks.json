@@ -17,6 +17,12 @@
       "command": "ssh -t yancmo@100.105.31.42 'set -euo pipefail; echo \"Monitoring infra-new crumb (Ctrl+C to stop)\"; while true; do echo; date; echo \"--- docker compose ps crumb\"; sudo docker compose -p infra-new -f /opt/infra-new/compose/docker-compose.yml ps crumb || true; echo \"--- crumb image + health\"; sudo docker inspect infra-new-crumb-1 --format \"ImageID={{.Image}} Health={{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}} Started={{.State.StartedAt}}\" || true; echo \"--- last 40 lines crumb logs\"; sudo docker logs --tail 40 infra-new-crumb-1 2>/dev/null || true; sleep 15; done'",
       "isBackground": true,
       "problemMatcher": []
+        {
+          "label": "Git: Push to refactor-with-gpt5_2",
+          "type": "shell",
+          "command": "set -euo pipefail; git push origin HEAD:refactor-with-gpt5_2",
+          "problemMatcher": []
+        },
     }
   ]
 }
