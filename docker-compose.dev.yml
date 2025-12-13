@@ -1,0 +1,78 @@
+services:
+  crumb-postgres-dev:
+    image: postgres:15
+    environment:
+      - POSTGRES_DB=crumb
+      - POSTGRES_USER=crumb
+      - POSTGRES_PASSWORD=${CRUMB_POSTGRES_PASSWORD:-crumb_password}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U crumb -d crumb"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    volumes:
+      - crumb_postgres_dev_data:/var/lib/postgresql/data
+    # Optional: expose for local debugging (separate from prod compose)
+    ports:
+      - "5434:5432"
+
+  crumb-api-dev:
+    image: node:20-alpine
+    working_dir: /app
+    volumes:
+      - ./:/app:delegated
+      # Keep container dependencies separate from host
+      - crumb_node_modules_api:/app/node_modules
+    environment:
+      - NODE_ENV=development
+      - PORT=5555
+      - DATABASE_URL=${DATABASE_URL:-postgresql://crumb:${CRUMB_POSTGRES_PASSWORD:-crumb_password}@crumb-postgres-dev:5432/crumb}
+    ports:
+      - "5555:5555"
+    depends_on:
+      crumb-postgres-dev:
+        condition: service_healthy
+    command: >
+      sh -lc "
+        if [ ! -d node_modules ] || [ -z \"$(ls -A node_modules 2>/dev/null)\" ]; then
+          echo 'Installing dependencies (api)...';
+          npm ci;
+        fi;
+        node --watch server/index.js
+      "
+
+  crumb-web-dev:
+    image: node:20-alpine
+    working_dir: /app
+    volumes:
+      - ./:/app:delegated
+      - crumb_node_modules_web:/app/node_modules
+    environment:
+      - NODE_ENV=development
+      # Vite config reads this to route /api to the backend container
+      - VITE_API_PROXY_TARGET=http://crumb-api-dev:5555
+      # Helps file watching on Docker Desktop (macOS)
+      - CHOKIDAR_USEPOLLING=true
+      - CHOKIDAR_INTERVAL=100
+    ports:
+      - "5173:5173"
+    depends_on:
+      - crumb-api-dev
+    command: >
+      sh -lc "
+        if [ ! -d node_modules ] || [ -z \"$(ls -A node_modules 2>/dev/null)\" ]; then
+          echo 'Installing dependencies (web)...';
+          npm ci;
+        fi;
+        npm run dev -- --host 0.0.0.0 --port 5173
+      "
+
+volumes:
+  crumb_postgres_dev_data:
+  crumb_node_modules_api:
+  crumb_node_modules_web:
+
+networks:
+  default:
+    name: crumb-dev-network

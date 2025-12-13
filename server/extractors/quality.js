@@ -219,7 +219,14 @@ export function normalizeRecipe(recipe, baseUrl) {
   const normalized = { ...recipe };
 
   normalized.title = normalizeTitle(normalized.title);
-  if (normalized.image) normalized.image = makeAbsoluteUrl(normalized.image, baseUrl || normalized.sourceUrl);
+  if (normalized.image) {
+    // Drop common lazy-load placeholders (these break the UI and shouldn't count as "has image")
+    if (typeof normalized.image === 'string' && normalized.image.startsWith('data:image')) {
+      normalized.image = undefined;
+    } else {
+      normalized.image = makeAbsoluteUrl(normalized.image, baseUrl || normalized.sourceUrl);
+    }
+  }
 
   normalized.ingredients = normalizeIngredientTokens(normalized.ingredients);
   normalized.steps = normalizeSteps(normalized.steps);

@@ -76,7 +76,9 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': {
-        target: 'http://localhost:3000',
+        // Useful for Docker dev: set VITE_API_PROXY_TARGET=http://api:5555
+        // Default keeps existing local dev behavior.
+        target: process.env.VITE_API_PROXY_TARGET || 'http://localhost:3000',
         changeOrigin: true,
       },
     },

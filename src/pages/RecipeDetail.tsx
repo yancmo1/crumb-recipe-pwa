@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Clock, Users, Printer, RotateCcw, Plus, Minus, Trash2, Scale, Camera, Upload, Edit3, Check, X } from 'lucide-react';
+import { ArrowLeft, Clock, Users, Printer, RotateCcw, Plus, Minus, Trash2, Scale, Camera, Upload, Edit3, Check, X, ExternalLink } from 'lucide-react';
 import { toast } from 'sonner';
 import { useRecipeStore, useCookSession } from '../state/session';
 import { scaleIngredients, formatFraction, getMultiplierOptions, getIngredientDisplayAmount } from '../utils/scale';
@@ -84,6 +84,14 @@ export default function RecipeDetail() {
   const hasConvertibleIngredients = recipe.ingredients.some(ingredient => 
     isConvertibleToGrams(ingredient)
   );
+
+  const sourceHost = (() => {
+    try {
+      return new URL(recipe.sourceUrl).hostname.replace(/^www\./, '');
+    } catch {
+      return undefined;
+    }
+  })();
 
   const handleStartSession = () => {
     if (id) {
@@ -322,12 +330,26 @@ export default function RecipeDetail() {
           
           <h1 className="text-2xl font-bold text-gray-900 mb-2">{recipe.title}</h1>
           
-          <div className="flex items-center space-x-4 text-sm text-gray-600 mb-4">
+          <div className="flex items-center flex-wrap gap-x-4 gap-y-1 text-sm text-gray-600 mb-4">
             {recipe.sourceName && (
               <span>{recipe.sourceName}</span>
             )}
             {recipe.author && (
               <span>by {recipe.author}</span>
+            )}
+
+            {recipe.sourceUrl && (
+              <a
+                href={recipe.sourceUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 text-blueberry hover:underline"
+                title="Open the original recipe page"
+              >
+                <ExternalLink className="h-4 w-4" />
+                <span>Original</span>
+                {sourceHost && <span className="text-gray-500">({sourceHost})</span>}
+              </a>
             )}
           </div>
 
