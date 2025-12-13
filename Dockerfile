@@ -1,34 +1,43 @@
-# Simple single-stage build for Crumb PWA
-FROM node:20-alpine
+### Build dependencies (includes dev deps for Vite build)
+FROM node:20-alpine AS deps
 
 WORKDIR /app
-
-# Copy package files
 COPY package*.json ./
+RUN npm ci
 
-# Install all dependencies (including devDependencies for server)
-RUN npm install --include=dev
+### Build frontend
+FROM node:20-alpine AS builder
 
-# Copy all source code
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
 # Always build fresh frontend (remove old dist first to ensure clean build)
-RUN rm -rf dist && npx vite build
+RUN rm -rf dist && npm run build
+
+### Runtime (production-only deps)
+FROM node:20-alpine AS runner
+
+WORKDIR /app
+ENV NODE_ENV=production
+ENV PORT=5554
+
+COPY package*.json ./
+RUN npm ci --omit=dev
+
+COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/server ./server
 
 # Create non-root user
 RUN addgroup -g 1001 -S nodejs && \
     adduser -S nodejs -u 1001
 
-# Set ownership
 RUN chown -R nodejs:nodejs /app
 USER nodejs
 
-# Expose port
 EXPOSE 5554
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD node -e "const http = require('http'); const port = process.env.PORT || 5554; const options = { host: 'localhost', port: port, path: '/health', timeout: 2000 }; const req = http.request(options, (res) => { if (res.statusCode === 200) process.exit(0); else process.exit(1); }); req.on('error', () => process.exit(1)); req.end();"
+HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
+  CMD node -e "const http = require('http'); const port = Number(process.env.PORT || 5554); const req = http.request({ host: '127.0.0.1', port, path: '/health', timeout: 2000 }, (res) => process.exit(res.statusCode === 200 ? 0 : 1)); req.on('error', () => process.exit(1)); req.end();"
 
-# Start the application
 CMD ["node", "server/index.js"]

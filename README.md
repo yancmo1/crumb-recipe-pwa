@@ -160,8 +160,10 @@ docker-compose up -d
 ### Environment Variables
 
 ```bash
-# Port (default: 3000)
-PORT=3000
+# Port
+# - Local dev default (when running `npm run server`): 3000
+# - Container / infra-new recommended: 5554
+PORT=5554
 
 # Node environment
 NODE_ENV=production

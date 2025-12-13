@@ -1,0 +1,46 @@
+# Add this service block into /opt/infra-new/compose/docker-compose.yml
+# (project: infra-new). This follows SERVER_MASTER_GUIDE.md patterns.
+
+services:
+  crumb:
+    image: ghcr.io/yancmo1/crumb-recipe-pwa:latest
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      - PORT=5554
+      - DATABASE_URL=postgresql://crumb:${CRUMB_POSTGRES_PASSWORD}@crumb-postgres:5432/crumb
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:5554/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - edge
+      - backend
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=edge"
+      - "traefik.http.routers.crumb.rule=Host(`${CRUMB_HOST}`)"
+      - "traefik.http.routers.crumb.entrypoints=websecure"
+      - "traefik.http.routers.crumb.tls=true"
+      - "traefik.http.services.crumb.loadbalancer.server.port=5554"
+
+  crumb-postgres:
+    image: postgres:15
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DB=crumb
+      - POSTGRES_USER=crumb
+      - POSTGRES_PASSWORD=${CRUMB_POSTGRES_PASSWORD}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U crumb -d crumb"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    volumes:
+      - crumb_postgres_data:/var/lib/postgresql/data
+    networks:
+      - backend
+
+volumes:
+  crumb_postgres_data:

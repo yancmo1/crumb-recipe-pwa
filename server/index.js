@@ -28,10 +28,19 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+// API health endpoint (used by frontend availability checks)
+app.head('/api/health', (req, res) => {
+  res.status(200).end();
+});
+
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
 // Recipe import endpoint
 app.post('/api/import', async (req, res) => {
   try {
-    const { url, useImprovedExtractor = true, saveToServer = true } = req.body;
+    const { url, useImprovedExtractor = true, saveToServer = true, includeDebug = false } = req.body;
     
     if (!url) {
       return res.status(400).json({
@@ -44,9 +53,16 @@ app.post('/api/import', async (req, res) => {
     console.log(`Using ${useImprovedExtractor ? 'IMPROVED' : 'LEGACY'} extractor`);
     
     // Use improved extractor by default, fallback to legacy if requested
-    const recipe = useImprovedExtractor 
-      ? await extractRecipeImproved(url)
-      : await extractRecipe(url);
+    let recipe;
+    let debug;
+
+    if (useImprovedExtractor) {
+      const result = await extractRecipeImproved(url, { includeDebug: !!includeDebug });
+      recipe = result.recipe;
+      debug = result.debug;
+    } else {
+      recipe = await extractRecipe(url);
+    }
     
     // Optionally save to database
     if (saveToServer) {
@@ -61,7 +77,8 @@ app.post('/api/import', async (req, res) => {
     
     res.json({
       success: true,
-      recipe
+      recipe,
+      ...(includeDebug && debug ? { debug } : {})
     });
     
   } catch (error) {

@@ -103,23 +103,60 @@ export function tryWPRM($, url) {
   // Instructions - handle groups and keep section headers
   const steps = [];
   container.find('.wprm-recipe-instruction-group').each((_, group) => {
-    const groupName = $(group).find('.wprm-recipe-instruction-group-name').text().trim();
+    const groupNameRaw = $(group).find('.wprm-recipe-instruction-group-name').text().trim();
+    const groupName = groupNameRaw.replace(/\s*:+\s*$/, '').trim();
     if (groupName) {
       steps.push(`**${groupName}:**`);
     }
-    
-    $(group).find('.wprm-recipe-instruction-text').each((_, step) => {
-      const text = $(step).text().trim();
-      if (text && text.length > 10) steps.push(text);
-    });
+
+    // Some WPRM themes split sub-step labels (e.g. "Mix:") into their own node.
+    // Collect raw lines first, then merge short label-only lines with the next line.
+    const rawLines = [];
+    $(group)
+      .find('.wprm-recipe-instruction-text, .wprm-recipe-instruction')
+      .each((_, step) => {
+        const text = $(step).text().trim();
+        if (text) rawLines.push(text);
+      });
+
+    for (let i = 0; i < rawLines.length; i++) {
+      const line = rawLines[i];
+      const isLabel = /:$/.test(line) && line.length <= 40;
+      const next = rawLines[i + 1];
+
+      if (isLabel && next) {
+        steps.push(`${line} ${next}`.trim());
+        i++; // skip next
+        continue;
+      }
+
+      steps.push(line);
+    }
   });
 
   // Fallback if no groups
   if (steps.length === 0) {
-    container.find('.wprm-recipe-instruction-text').each((_, step) => {
-      const text = $(step).text().trim();
-      if (text && text.length > 10) steps.push(text);
-    });
+    const rawLines = [];
+    container
+      .find('.wprm-recipe-instruction-text, .wprm-recipe-instruction')
+      .each((_, step) => {
+        const text = $(step).text().trim();
+        if (text) rawLines.push(text);
+      });
+
+    for (let i = 0; i < rawLines.length; i++) {
+      const line = rawLines[i];
+      const isLabel = /:$/.test(line) && line.length <= 40;
+      const next = rawLines[i + 1];
+
+      if (isLabel && next) {
+        steps.push(`${line} ${next}`.trim());
+        i++;
+        continue;
+      }
+
+      steps.push(line);
+    }
   }
 
   recipe.steps = steps;

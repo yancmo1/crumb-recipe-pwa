@@ -11,9 +11,16 @@
     "test:e2e": "playwright test",
     "server": "node server/index.js",
     "docker:build": "docker build -t crumb .",
-    "docker:run": "docker run -p 3000:3000 crumb"
+    "docker:run": "docker run -p 5554:5554 -e PORT=5554 crumb"
   },
   "dependencies": {
+    "@mozilla/readability": "^0.4.4",
+    "cheerio": "^1.0.0-rc.12",
+    "cors": "^2.8.5",
+    "express": "^4.18.2",
+    "jsdom": "^22.1.0",
+    "nanoid": "^4.0.2",
+    "pg": "^8.11.3",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-router-dom": "^6.15.0",
@@ -26,8 +33,7 @@
     "clsx": "^2.0.0",
     "tailwind-merge": "^1.14.0",
     "sonner": "^1.0.3",
-    "nanoid": "^4.0.2",
-    "pg": "^8.11.3"
+    "undici": "^5.22.1"
   },
   "devDependencies": {
     "@types/react": "^18.2.15",
@@ -44,13 +50,7 @@
     "workbox-build": "^7.0.0",
     "vite-plugin-pwa": "^0.16.4",
     "@types/cheerio": "^0.22.31",
-    "express": "^4.18.2",
     "@types/express": "^4.17.17",
-    "cheerio": "^1.0.0-rc.12",
-    "@mozilla/readability": "^0.4.4",
-    "undici": "^5.22.1",
-    "cors": "^2.8.5",
-    "@types/cors": "^2.8.13",
-    "jsdom": "^22.1.0"
+    "@types/cors": "^2.8.13"
   }
 }

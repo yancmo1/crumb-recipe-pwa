@@ -33,6 +33,9 @@ export default function RecipeDetail() {
   const [notesText, setNotesText] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const isStepGroupHeader = (step: string) => /^\*\*[^*]+:\*\*$/.test(step.trim());
+  const formatStepGroupHeader = (step: string) => step.replace(/\*\*/g, '').replace(/:\s*$/, '').trim();
+
   useEffect(() => {
     if (id) {
       const foundRecipe = recipes.find(r => r.id === id);
@@ -519,34 +522,45 @@ export default function RecipeDetail() {
           <h2 className="text-xl font-bold text-gray-900 mb-4">Instructions</h2>
           
           <div className="space-y-4">
-            {recipe.steps.map((step, index) => (
-              <div key={index} className="flex items-start space-x-3 step-item">
-                {currentSession ? (
-                  <button
-                    onClick={() => toggleStep(index)}
-                    className={`mt-1 w-6 h-6 rounded-full border-2 flex-shrink-0 no-print ${
-                      currentSession.checkedSteps[index]
-                        ? 'bg-sage border-sage'
-                        : 'border-gray-300'
-                    }`}
-                  >
-                    {currentSession.checkedSteps[index] && (
-                      <svg className="w-4 h-4 text-white m-auto" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                      </svg>
-                    )}
-                  </button>
-                ) : (
-                  <span className="mt-1 w-6 h-6 rounded-full bg-blueberry text-white text-sm flex items-center justify-center flex-shrink-0">
-                    {index + 1}
-                  </span>
-                )}
-                
-                <p className={`text-gray-900 ${currentSession?.checkedSteps[index] ? 'line-through opacity-60' : ''}`}>
-                  {step}
-                </p>
-              </div>
-            ))}
+            {recipe.steps.map((step, index) => {
+              // Render section headers (e.g. "**Levain:**") without checkboxes
+              if (isStepGroupHeader(step)) {
+                return (
+                  <h3 key={index} className="text-base font-semibold text-gray-800 mt-4 mb-2 first:mt-0">
+                    {formatStepGroupHeader(step)}
+                  </h3>
+                );
+              }
+
+              return (
+                <div key={index} className="flex items-start space-x-3 step-item">
+                  {currentSession ? (
+                    <button
+                      onClick={() => toggleStep(index)}
+                      className={`mt-1 w-6 h-6 rounded-full border-2 flex-shrink-0 no-print ${
+                        currentSession.checkedSteps[index]
+                          ? 'bg-sage border-sage'
+                          : 'border-gray-300'
+                      }`}
+                    >
+                      {currentSession.checkedSteps[index] && (
+                        <svg className="w-4 h-4 text-white m-auto" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                        </svg>
+                      )}
+                    </button>
+                  ) : (
+                    <span className="mt-1 w-6 h-6 rounded-full bg-blueberry text-white text-sm flex items-center justify-center flex-shrink-0">
+                      {index + 1}
+                    </span>
+                  )}
+
+                  <p className={`text-gray-900 ${currentSession?.checkedSteps[index] ? 'line-through opacity-60' : ''}`}>
+                    {step}
+                  </p>
+                </div>
+              );
+            })}
           </div>
         </div>
 

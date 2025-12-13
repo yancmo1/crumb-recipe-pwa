@@ -1,0 +1,28 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Git: Commit (auto message)",
+      "type": "shell",
+      "command": "set -euo pipefail; if [[ -z \"$(git status --porcelain)\" ]]; then echo 'No changes to commit.'; exit 0; fi; git add -A; files=$(git diff --cached --name-only | tr '\\n' ' ' | sed -e 's/[[:space:]]\\{1,\\}/ /g' -e 's/^ //; s/ $//'); ts=$(date -u +%Y-%m-%dT%H:%MZ); git commit -m \"fix: improve import instruction groups\" -m \"Auto-commit: ${ts}\" -m \"Files: ${files}\"",
+      "problemMatcher": [],
+      "group": {
+        "kind": "build",
+        "isDefault": false
+      }
+    },
+    {
+      "label": "Git: Push to refactor-with-gpt5_2",
+      "type": "shell",
+      "command": "set -euo pipefail; git push origin HEAD:refactor-with-gpt5_2",
+      "problemMatcher": []
+    },
+    {
+      "label": "Server: Monitor crumb deployment",
+      "type": "shell",
+      "command": "ssh -t yancmo@100.105.31.42 'set -euo pipefail; echo \"Monitoring infra-new crumb (Ctrl+C to stop)\"; while true; do echo; date; echo \"--- docker compose ps crumb\"; sudo docker compose -p infra-new -f /opt/infra-new/compose/docker-compose.yml ps crumb || true; echo \"--- crumb image + health\"; sudo docker inspect infra-new-crumb-1 --format \"ImageID={{.Image}} Health={{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}} Started={{.State.StartedAt}}\" || true; echo \"--- last 40 lines crumb logs\"; sudo docker logs --tail 40 infra-new-crumb-1 2>/dev/null || true; sleep 15; done'",
+      "isBackground": true,
+      "problemMatcher": []
+    }
+  ]
+}
