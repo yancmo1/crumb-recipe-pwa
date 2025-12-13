@@ -64,7 +64,29 @@ npm run server
 ```
 
 - Frontend: `http://localhost:5173`
-- API server: `http://localhost:3001`
+- API server: `http://localhost:3000`
+
+### Docker Dev (hot reload)
+
+If you want a Docker-based dev environment (useful for testing changes locally before committing), you can run the full stack with hot reload:
+
+- Frontend (Vite): `http://localhost:5173`
+- Backend API: `http://localhost:5555`
+- Postgres (optional, for debugging): `localhost:5434`
+
+This uses `docker-compose.dev.yml` and points the Vite `/api` proxy at the backend container.
+
+Run it:
+
+```bash
+npm run docker:dev
+```
+
+Stop it:
+
+```bash
+docker compose -f docker-compose.dev.yml down
+```
 
 ## Architecture
 

@@ -8,6 +8,44 @@
 import { nanoid } from 'nanoid';
 import { parseIngredients } from '../utils.js';
 
+function parseSrcset(srcset) {
+  if (!srcset || typeof srcset !== 'string') return null;
+  // Format: "url 400w, url 800w" or sometimes "url 2x"
+  const candidates = srcset
+    .split(',')
+    .map(s => s.trim())
+    .map(part => {
+      const [u, d] = part.split(/\s+/);
+      if (!u) return null;
+      const widthMatch = (d || '').match(/(\d+)w/);
+      const densityMatch = (d || '').match(/(\d+(?:\.\d+)?)x/);
+      const score = widthMatch ? parseInt(widthMatch[1], 10) : (densityMatch ? parseFloat(densityMatch[1]) * 1000 : 0);
+      return { url: u, score };
+    })
+    .filter(Boolean);
+
+  if (candidates.length === 0) return null;
+  candidates.sort((a, b) => (b.score || 0) - (a.score || 0));
+  return candidates[0].url;
+}
+
+function extractImgUrl($img) {
+  if (!$img || !$img.length) return undefined;
+
+  const attrs = [
+    $img.attr('data-lazy-src'),
+    $img.attr('data-src'),
+    $img.attr('data-original'),
+    parseSrcset($img.attr('data-srcset')),
+    parseSrcset($img.attr('srcset')),
+    $img.attr('src')
+  ].filter(Boolean);
+
+  // Avoid placeholder SVG/data URIs
+  const usable = attrs.find(u => typeof u === 'string' && !u.startsWith('data:image'));
+  return usable || (attrs[0] || undefined);
+}
+
 /**
  * Detect and extract from WordPress Recipe Maker (WPRM)
  * Used by many modern food blogs
@@ -56,9 +94,11 @@ export function tryWPRM($, url) {
   }
 
   // Image
-  const img = container.find('.wprm-recipe-image img').first().attr('src') 
-    || container.find('img').first().attr('src');
-  if (img) recipe.image = img;
+  const ogImage = $('meta[property="og:image"]').attr('content') || $('meta[property="og:image:secure_url"]').attr('content');
+  const wprmImgEl = container.find('.wprm-recipe-image img').first();
+  const wprmImg = extractImgUrl(wprmImgEl) || extractImgUrl(container.find('img').first());
+  // Prefer OG image if present (usually larger / better), otherwise use recipe card image
+  recipe.image = ogImage || wprmImg || undefined;
 
   // Ingredients - handle groups
   const ingredients = [];
@@ -246,8 +286,10 @@ export function tryTastyRecipes($, url) {
   if (Object.keys(times).length > 0) recipe.times = times;
 
   // Image
-  const img = container.find('.tasty-recipes-image img').first().attr('src');
-  if (img) recipe.image = img;
+  const ogImage = $('meta[property="og:image"]').attr('content') || $('meta[property="og:image:secure_url"]').attr('content');
+  const img = extractImgUrl(container.find('.tasty-recipes-image img').first())
+    || extractImgUrl(container.find('img').first());
+  recipe.image = ogImage || img || undefined;
 
   // Ingredients
   const ingredients = [];
@@ -398,9 +440,10 @@ export function tryCookedPlugin($, url) {
     || 'Untitled Recipe';
 
   // Image
-  const img = container.find('.cooked-recipe-image img, .cooked-recipe-thumb img').first().attr('src')
-    || $('meta[property="og:image"]').attr('content');
-  if (img) recipe.image = img;
+  const ogImage = $('meta[property="og:image"]').attr('content') || $('meta[property="og:image:secure_url"]').attr('content');
+  const img = extractImgUrl(container.find('.cooked-recipe-image img, .cooked-recipe-thumb img').first())
+    || extractImgUrl(container.find('img').first());
+  recipe.image = ogImage || img || undefined;
 
   // Ingredients - handle groups (headings)
   const ingredients = [];
