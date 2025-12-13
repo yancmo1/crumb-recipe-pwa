@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Dependencies
 node_modules/
 
@@ -46,3 +47,6 @@ pnpm-debug.log*
 *.swp
 *.swo
 *~
+=======
+node_modules
+>>>>>>> d3abb22 (fix: Update Docker tag handling and add .gitignore)

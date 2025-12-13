@@ -47,7 +47,9 @@ jobs:
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
             type=semver,pattern={{major}}
-            type=sha,prefix={{branch}}-
+            # NOTE: On tag pushes (refs/tags/*), {{branch}} is empty, which can
+            # produce an invalid tag like ':-<sha>'. Use a stable prefix.
+            type=sha,prefix=sha-
             type=raw,value=latest,enable={{is_default_branch}}
 
       - name: Build and push Docker image
