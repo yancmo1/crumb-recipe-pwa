@@ -2,7 +2,7 @@ import { useMemo, useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Clock, Users, Printer, RotateCcw, Plus, Minus, Trash2, Scale, Camera, Upload, Edit3, Check, X, ExternalLink, Star } from 'lucide-react';
 import { toast } from 'sonner';
-import { useRecipeStore, useCookSession } from '../state/session';
+import { useRecipeStore, useCookSession, useSettings } from '../state/session';
 import { scaleIngredients, formatFraction, getMultiplierOptions, getIngredientDisplayAmount } from '../utils/scale';
 import { isConvertibleToGrams } from '../utils/conversions';
 import type { Recipe } from '../types';
@@ -11,6 +11,7 @@ export default function RecipeDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { recipes, deleteRecipe, updateRecipe } = useRecipeStore();
+  const { preferGrams, setPreferGrams } = useSettings();
   const { 
     currentSession, 
     loadSession, 
@@ -23,7 +24,7 @@ export default function RecipeDetail() {
   } = useCookSession();
   
   const [recipe, setRecipe] = useState<Recipe | null>(null);
-  const [showGrams, setShowGrams] = useState(false);
+  const showGrams = preferGrams;
   const [currentMultiplier, setCurrentMultiplier] = useState(1); // Local multiplier state
   const [selectedMultiplier, setSelectedMultiplier] = useState('1');
   const [showCustomInput, setShowCustomInput] = useState(false);
@@ -476,7 +477,7 @@ export default function RecipeDetail() {
             <h3 className="font-semibold text-gray-900">Scale Recipe</h3>
             {hasConvertibleIngredients && (
               <button
-                onClick={() => setShowGrams(!showGrams)}
+                onClick={() => setPreferGrams(!preferGrams)}
                 className={`flex items-center space-x-1 px-2 py-1 rounded text-sm font-medium transition-colors ${
                   showGrams 
                     ? 'bg-sage text-white' 

@@ -267,10 +267,12 @@ interface SettingsStore {
   theme: 'light' | 'dark' | 'system';
   keepSessionsOnClose: boolean;
   autoExtendSessions: boolean;
+  preferGrams: boolean;
   
   setTheme: (theme: 'light' | 'dark' | 'system') => void;
   setKeepSessionsOnClose: (keep: boolean) => void;
   setAutoExtendSessions: (auto: boolean) => void;
+  setPreferGrams: (prefer: boolean) => void;
 }
 
 export const useSettings = create<SettingsStore>()(
@@ -279,10 +281,15 @@ export const useSettings = create<SettingsStore>()(
       theme: 'light',
       keepSessionsOnClose: false,
       autoExtendSessions: true,
+      // Default to grams: most serious home cooks use weight.
+      // If an existing user has older persisted settings without this field,
+      // Zustand will fall back to this default.
+      preferGrams: true,
       
       setTheme: (theme) => set({ theme }),
       setKeepSessionsOnClose: (keepSessionsOnClose) => set({ keepSessionsOnClose }),
-      setAutoExtendSessions: (autoExtendSessions) => set({ autoExtendSessions })
+      setAutoExtendSessions: (autoExtendSessions) => set({ autoExtendSessions }),
+      setPreferGrams: (preferGrams) => set({ preferGrams })
     }),
     {
       name: 'crumb-settings'
