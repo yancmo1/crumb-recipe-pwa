@@ -2,7 +2,7 @@ import { useMemo, useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Clock, Users, Printer, RotateCcw, Plus, Minus, Trash2, Scale, Camera, Upload, Edit3, Check, X, ExternalLink, Star } from 'lucide-react';
 import { toast } from 'sonner';
-import { useRecipeStore, useCookSession } from '../state/session';
+import { useRecipeStore, useCookSession, useSettings } from '../state/session';
 import { scaleIngredients, formatFraction, getMultiplierOptions, getIngredientDisplayAmount } from '../utils/scale';
 import { isConvertibleToGrams } from '../utils/conversions';
 import type { Recipe } from '../types';
@@ -11,6 +11,7 @@ export default function RecipeDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { recipes, deleteRecipe, updateRecipe } = useRecipeStore();
+  const { preferGrams, setPreferGrams } = useSettings();
   const { 
     currentSession, 
     loadSession, 
@@ -23,7 +24,7 @@ export default function RecipeDetail() {
   } = useCookSession();
   
   const [recipe, setRecipe] = useState<Recipe | null>(null);
-  const [showGrams, setShowGrams] = useState(false);
+  const showGrams = preferGrams;
   const [currentMultiplier, setCurrentMultiplier] = useState(1); // Local multiplier state
   const [selectedMultiplier, setSelectedMultiplier] = useState('1');
   const [showCustomInput, setShowCustomInput] = useState(false);
@@ -284,7 +285,7 @@ export default function RecipeDetail() {
     <div className="min-h-screen bg-oatmeal">
       {/* Header */}
       <header className="bg-white shadow-sm border-b border-gray-200 no-print">
-        <div className="max-w-md mx-auto px-4 py-4">
+        <div className="max-w-md md:max-w-4xl lg:max-w-6xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4 flex-1 min-w-0">
               <button
@@ -327,7 +328,7 @@ export default function RecipeDetail() {
       {/* Session Status */}
       {currentSession && timeRemaining > 0 && (
         <div className="bg-sage text-white p-3 no-print">
-          <div className="max-w-md mx-auto px-4 flex items-center justify-between">
+          <div className="max-w-md md:max-w-4xl lg:max-w-6xl mx-auto px-4 flex items-center justify-between">
             <span className="text-sm">
               Session expires in {hoursRemaining}h {minutesRemaining}m
             </span>
@@ -341,7 +342,7 @@ export default function RecipeDetail() {
         </div>
       )}
 
-      <div className="max-w-md mx-auto px-4 py-6 space-y-6">
+      <div className="max-w-md md:max-w-4xl lg:max-w-6xl mx-auto px-4 py-6 space-y-6">
         {/* Recipe Info */}
         <div className="bg-white rounded-lg p-6 shadow-sm recipe-content">
           {/* Recipe Image with Upload Option */}
@@ -476,7 +477,7 @@ export default function RecipeDetail() {
             <h3 className="font-semibold text-gray-900">Scale Recipe</h3>
             {hasConvertibleIngredients && (
               <button
-                onClick={() => setShowGrams(!showGrams)}
+                onClick={() => setPreferGrams(!preferGrams)}
                 className={`flex items-center space-x-1 px-2 py-1 rounded text-sm font-medium transition-colors ${
                   showGrams 
                     ? 'bg-sage text-white' 
@@ -551,144 +552,150 @@ export default function RecipeDetail() {
           )}
         </div>
 
-        {/* Ingredients */}
-        <div className="bg-white rounded-lg p-6 shadow-sm recipe-content">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-bold text-gray-900">Ingredients</h2>
-            <div className="flex items-center space-x-2 text-sm text-gray-600">
-              {multiplier !== 1 && (
-                <span>Scaled by {formatFraction(multiplier)}×</span>
-              )}
-              {showGrams && (
-                <span className="bg-sage text-white px-2 py-1 rounded text-xs">
-                  Grams
-                </span>
-              )}
-            </div>
-          </div>
-          
-          <div className="space-y-3">
-            {scaledIngredients.map((ingredient, index) => {
-              // Render group headers differently
-              if (ingredient.isGroupHeader) {
-                return (
-                  <h3 key={index} className="text-base font-semibold text-gray-800 mt-4 mb-2 first:mt-0">
-                    {ingredient.raw
-                      .replace(/\*\*/g, '')
-                      // Only remove a trailing colon (e.g., "Levain:"), keep internal colons like "1:10:10"
-                      .replace(/:\s*$/, '')
-                      .trim()}
-                  </h3>
-                );
-              }
-              
-              // Regular ingredient with checkbox
-              return (
-                <div
-                  key={index}
-                  className="flex items-start space-x-3 ingredient-item"
-                >
-                  {currentSession ? (
-                    <button
-                      onClick={() => toggleIngredient(index)}
-                      className={`mt-1 w-5 h-5 rounded border-2 flex-shrink-0 no-print ${
-                        currentSession.checkedIngredients[index]
-                          ? 'bg-sage border-sage'
-                          : 'border-gray-300'
-                      }`}
-                    >
-                      {currentSession.checkedIngredients[index] && (
-                        <svg className="w-3 h-3 text-white m-auto" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                        </svg>
-                      )}
-                    </button>
-                  ) : (
-                    <div className="mt-1 w-5 h-5 rounded border-2 border-gray-300 flex-shrink-0 print-only"></div>
-                  )}
-                  
-                  <span className={`text-gray-900 ${currentSession?.checkedIngredients[index] ? 'line-through opacity-60' : ''}`}>
-                  {(() => {
-                    if (showGrams && ingredient.gramsDisplay) {
-                      // Show grams conversion
-                      const item = ingredient.item;
-                      const note = ingredient.note;
-                      
-                      return [
-                        ingredient.gramsDisplay,
-                        item && ` ${item}`,
-                        note && ` (${note})`
-                      ].filter(Boolean).join('');
-                    } else {
-                      // Show original measurements
-                      const amount = getIngredientDisplayAmount(ingredient, false);
-                      const unit = ingredient.unit;
-                      const item = ingredient.item;
-                      const note = ingredient.note;
-                      
-                      return [
-                        amount,
-                        unit && ` ${unit}`,
-                        item && ` ${item}`,
-                        note && ` (${note})`
-                      ].filter(Boolean).join('');
-                    }
-                  })()}
-                  {showGrams && !ingredient.gramsDisplay && (
-                    <span className="text-gray-500 text-sm ml-2">(conversion not available)</span>
-                  )}
-                </span>
+        {/* Ingredients + Instructions (two-column on tablet/desktop) */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+          {/* Ingredients */}
+          <section
+            className="bg-white rounded-lg p-6 shadow-sm recipe-content md:sticky md:top-6 md:max-h-[calc(100vh-8rem)] md:overflow-auto"
+            aria-label="Ingredients"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold text-gray-900">Ingredients</h2>
+              <div className="flex items-center space-x-2 text-sm text-gray-600">
+                {multiplier !== 1 && (
+                  <span>Scaled by {formatFraction(multiplier)}×</span>
+                )}
+                {showGrams && (
+                  <span className="bg-sage text-white px-2 py-1 rounded text-xs">
+                    Grams
+                  </span>
+                )}
               </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Instructions */}
-        <div className="bg-white rounded-lg p-6 shadow-sm recipe-content">
-          <h2 className="text-xl font-bold text-gray-900 mb-4">Instructions</h2>
-          
-          <div className="space-y-4">
-            {recipe.steps.map((step, index) => {
-              // Render section headers (e.g. "**Levain:**") without checkboxes
-              if (isStepGroupHeader(step)) {
+            </div>
+            
+            <div className="space-y-3">
+              {scaledIngredients.map((ingredient, index) => {
+                // Render group headers differently
+                if (ingredient.isGroupHeader) {
+                  return (
+                    <h3 key={index} className="text-base font-semibold text-gray-800 mt-4 mb-2 first:mt-0">
+                      {ingredient.raw
+                        .replace(/\*\*/g, '')
+                        // Only remove a trailing colon (e.g., "Levain:"), keep internal colons like "1:10:10"
+                        .replace(/:\s*$/, '')
+                        .trim()}
+                    </h3>
+                  );
+                }
+                
+                // Regular ingredient with checkbox
                 return (
-                  <h3 key={index} className="text-base font-semibold text-gray-800 mt-4 mb-2 first:mt-0">
-                    {formatStepGroupHeader(step)}
-                  </h3>
-                );
-              }
-
-              return (
-                <div key={index} className="flex items-start space-x-3 step-item">
-                  {currentSession ? (
-                    <button
-                      onClick={() => toggleStep(index)}
-                      className={`mt-1 w-6 h-6 rounded-full border-2 flex-shrink-0 no-print ${
-                        currentSession.checkedSteps[index]
-                          ? 'bg-sage border-sage'
-                          : 'border-gray-300'
-                      }`}
-                    >
-                      {currentSession.checkedSteps[index] && (
-                        <svg className="w-4 h-4 text-white m-auto" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                        </svg>
-                      )}
-                    </button>
-                  ) : (
-                    <span className="mt-1 w-6 h-6 rounded-full bg-blueberry text-white text-sm flex items-center justify-center flex-shrink-0">
-                      {index + 1}
-                    </span>
-                  )}
-
-                  <p className={`text-gray-900 ${currentSession?.checkedSteps[index] ? 'line-through opacity-60' : ''}`}>
-                    {step}
-                  </p>
+                  <div
+                    key={index}
+                    className="flex items-start space-x-3 ingredient-item"
+                  >
+                    {currentSession ? (
+                      <button
+                        onClick={() => toggleIngredient(index)}
+                        className={`mt-1 w-5 h-5 rounded border-2 flex-shrink-0 no-print ${
+                          currentSession.checkedIngredients[index]
+                            ? 'bg-sage border-sage'
+                            : 'border-gray-300'
+                        }`}
+                      >
+                        {currentSession.checkedIngredients[index] && (
+                          <svg className="w-3 h-3 text-white m-auto" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                          </svg>
+                        )}
+                      </button>
+                    ) : (
+                      <div className="mt-1 w-5 h-5 rounded border-2 border-gray-300 flex-shrink-0 print-only"></div>
+                    )}
+                    
+                    <span className={`text-gray-900 ${currentSession?.checkedIngredients[index] ? 'line-through opacity-60' : ''}`}>
+                    {(() => {
+                      if (showGrams && ingredient.gramsDisplay) {
+                        // Show grams conversion
+                        const item = ingredient.item;
+                        const note = ingredient.note;
+                        
+                        return [
+                          ingredient.gramsDisplay,
+                          item && ` ${item}`,
+                          note && ` (${note})`
+                        ].filter(Boolean).join('');
+                      } else {
+                        // Show original measurements
+                        const amount = getIngredientDisplayAmount(ingredient, false);
+                        const unit = ingredient.unit;
+                        const item = ingredient.item;
+                        const note = ingredient.note;
+                        
+                        return [
+                          amount,
+                          unit && ` ${unit}`,
+                          item && ` ${item}`,
+                          note && ` (${note})`
+                        ].filter(Boolean).join('');
+                      }
+                    })()}
+                    {showGrams && !ingredient.gramsDisplay && (
+                      <span className="text-gray-500 text-sm ml-2">(conversion not available)</span>
+                    )}
+                  </span>
                 </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+          </section>
+
+          {/* Instructions */}
+          <section className="bg-white rounded-lg p-6 shadow-sm recipe-content" aria-label="Instructions">
+            <h2 className="text-xl font-bold text-gray-900 mb-4">Instructions</h2>
+            
+            <div className="space-y-4">
+              {recipe.steps.map((step, index) => {
+                // Render section headers (e.g. "**Levain:**") without checkboxes
+                if (isStepGroupHeader(step)) {
+                  return (
+                    <h3 key={index} className="text-base font-semibold text-gray-800 mt-4 mb-2 first:mt-0">
+                      {formatStepGroupHeader(step)}
+                    </h3>
+                  );
+                }
+
+                return (
+                  <div key={index} className="flex items-start space-x-3 step-item">
+                    {currentSession ? (
+                      <button
+                        onClick={() => toggleStep(index)}
+                        className={`mt-1 w-6 h-6 rounded-full border-2 flex-shrink-0 no-print ${
+                          currentSession.checkedSteps[index]
+                            ? 'bg-sage border-sage'
+                            : 'border-gray-300'
+                        }`}
+                      >
+                        {currentSession.checkedSteps[index] && (
+                          <svg className="w-4 h-4 text-white m-auto" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                          </svg>
+                        )}
+                      </button>
+                    ) : (
+                      <span className="mt-1 w-6 h-6 rounded-full bg-blueberry text-white text-sm flex items-center justify-center flex-shrink-0">
+                        {index + 1}
+                      </span>
+                    )}
+
+                    <p className={`text-gray-900 ${currentSession?.checkedSteps[index] ? 'line-through opacity-60' : ''}`}>
+                      {step}
+                    </p>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
         </div>
 
         {/* Tips */}
@@ -824,7 +831,7 @@ export default function RecipeDetail() {
 
       {/* Sticky Action Bar */}
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 no-print ios-padding">
-        <div className="max-w-md mx-auto flex justify-center space-x-4">
+        <div className="max-w-md md:max-w-4xl lg:max-w-6xl mx-auto flex justify-center space-x-4">
           {!currentSession ? (
             <button
               onClick={handleStartSession}

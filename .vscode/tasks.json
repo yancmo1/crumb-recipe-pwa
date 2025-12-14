@@ -23,6 +23,68 @@
       "command": "ssh -t yancmo@100.105.31.42 'set -euo pipefail; echo \"Monitoring infra-new crumb (Ctrl+C to stop)\"; while true; do echo; date; echo \"--- docker compose ps crumb\"; sudo docker compose -p infra-new -f /opt/infra-new/compose/docker-compose.yml ps crumb || true; echo \"--- crumb image + health\"; sudo docker inspect infra-new-crumb-1 --format \"ImageID={{.Image}} Health={{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}} Started={{.State.StartedAt}}\" || true; echo \"--- last 40 lines crumb logs\"; sudo docker logs --tail 40 infra-new-crumb-1 2>/dev/null || true; sleep 15; done'",
       "isBackground": true,
       "problemMatcher": []
+    },
+    {
+      "label": "Dev: Backend (Express)",
+      "type": "shell",
+      "command": "npm run server",
+      "isBackground": true,
+      "problemMatcher": {
+        "owner": "crumb-dev",
+        "pattern": [{
+          "regexp": ".*"
+        }],
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": ".*",
+          "endsPattern": "Recipe import server running on port"
+        }
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated"
+      }
+    },
+    {
+      "label": "Dev: Frontend (Vite)",
+      "type": "shell",
+      "command": "npm run dev",
+      "isBackground": true,
+      "problemMatcher": {
+        "owner": "crumb-dev",
+        "pattern": [{
+          "regexp": ".*"
+        }],
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": ".*",
+          "endsPattern": "Local:\\s+http"
+        }
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated"
+      }
+    },
+    {
+      "label": "Dev: Full stack (Vite + API)",
+      "type": "shell",
+      "command": "echo 'Dev servers started (see dedicated terminals)'",
+      "dependsOrder": "parallel",
+      "dependsOn": [
+        "Dev: Backend (Express)",
+        "Dev: Frontend (Vite)"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "Test: Dev server smoke",
+      "type": "shell",
+      "command": "node scripts/dev-smoke.mjs",
+      "dependsOn": [
+        "Dev: Full stack (Vite + API)"
+      ],
+      "problemMatcher": []
     }
   ]
 }

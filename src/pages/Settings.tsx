@@ -7,7 +7,14 @@ import { db } from '../db';
 
 export default function Settings() {
   const navigate = useNavigate();
-  const { theme, setTheme, keepSessionsOnClose, setKeepSessionsOnClose } = useSettings();
+  const {
+    theme,
+    setTheme,
+    keepSessionsOnClose,
+    setKeepSessionsOnClose,
+    preferGrams,
+    setPreferGrams
+  } = useSettings();
   const { recipes, loadRecipes } = useRecipeStore();
   const [isExporting, setIsExporting] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
@@ -147,6 +154,26 @@ export default function Settings() {
                 type="checkbox"
                 checked={keepSessionsOnClose}
                 onChange={(e) => setKeepSessionsOnClose(e.target.checked)}
+                className="w-5 h-5 text-blueberry rounded focus:ring-blueberry"
+              />
+            </label>
+          </div>
+        </div>
+
+        {/* Measurement Settings */}
+        <div className="bg-white rounded-lg p-6 shadow-sm">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">Measurements</h2>
+
+          <div className="space-y-4">
+            <label className="flex items-center justify-between">
+              <div>
+                <span className="text-gray-700">Prefer grams by default</span>
+                <p className="text-sm text-gray-500">Show weight conversions when available</p>
+              </div>
+              <input
+                type="checkbox"
+                checked={preferGrams}
+                onChange={(e) => setPreferGrams(e.target.checked)}
                 className="w-5 h-5 text-blueberry rounded focus:ring-blueberry"
               />
             </label>
