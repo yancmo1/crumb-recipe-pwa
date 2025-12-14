@@ -2,7 +2,7 @@ import { useMemo, useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Clock, Users, Printer, RotateCcw, Plus, Minus, Trash2, Scale, Camera, Upload, Edit3, Check, X, ExternalLink, Star } from 'lucide-react';
 import { toast } from 'sonner';
-import { useRecipeStore, useCookSession } from '../state/session';
+import { useRecipeStore, useCookSession, useSettings } from '../state/session';
 import { scaleIngredients, formatFraction, getMultiplierOptions, getIngredientDisplayAmount } from '../utils/scale';
 import { isConvertibleToGrams } from '../utils/conversions';
 import type { Recipe } from '../types';
@@ -21,9 +21,11 @@ export default function RecipeDetail() {
     resetSession,
     getTimeRemaining
   } = useCookSession();
+
+  const preferGrams = useSettings((s) => s.preferGrams);
+  const setPreferGrams = useSettings((s) => s.setPreferGrams);
   
   const [recipe, setRecipe] = useState<Recipe | null>(null);
-  const [showGrams, setShowGrams] = useState(false);
   const [currentMultiplier, setCurrentMultiplier] = useState(1); // Local multiplier state
   const [selectedMultiplier, setSelectedMultiplier] = useState('1');
   const [showCustomInput, setShowCustomInput] = useState(false);
@@ -85,7 +87,6 @@ export default function RecipeDetail() {
 
   // Use local multiplier, fallback to session multiplier
   const multiplier = currentMultiplier || currentSession?.multiplier || 1;
-  const scaledIngredients = scaleIngredients(recipe.ingredients, multiplier, showGrams);
   const timeRemaining = getTimeRemaining();
   const hoursRemaining = Math.floor(timeRemaining / (1000 * 60 * 60));
   const minutesRemaining = Math.floor((timeRemaining % (1000 * 60 * 60)) / (1000 * 60));
@@ -94,6 +95,11 @@ export default function RecipeDetail() {
   const hasConvertibleIngredients = recipe.ingredients.some(ingredient => 
     isConvertibleToGrams(ingredient)
   );
+
+  // Only enable grams mode when it can actually do something.
+  const showGrams = preferGrams && hasConvertibleIngredients;
+
+  const scaledIngredients = scaleIngredients(recipe.ingredients, multiplier, showGrams);
 
   const sourceHost = (() => {
     try {
@@ -284,7 +290,7 @@ export default function RecipeDetail() {
     <div className="min-h-screen bg-oatmeal">
       {/* Header */}
       <header className="bg-white shadow-sm border-b border-gray-200 no-print">
-        <div className="max-w-md mx-auto px-4 py-4">
+        <div className="max-w-md md:max-w-4xl lg:max-w-6xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4 flex-1 min-w-0">
               <button
@@ -327,7 +333,7 @@ export default function RecipeDetail() {
       {/* Session Status */}
       {currentSession && timeRemaining > 0 && (
         <div className="bg-sage text-white p-3 no-print">
-          <div className="max-w-md mx-auto px-4 flex items-center justify-between">
+          <div className="max-w-md md:max-w-4xl lg:max-w-6xl mx-auto px-4 flex items-center justify-between">
             <span className="text-sm">
               Session expires in {hoursRemaining}h {minutesRemaining}m
             </span>
@@ -341,7 +347,7 @@ export default function RecipeDetail() {
         </div>
       )}
 
-      <div className="max-w-md mx-auto px-4 py-6 space-y-6">
+      <div className="max-w-md md:max-w-4xl lg:max-w-6xl mx-auto px-4 py-6 space-y-6">
         {/* Recipe Info */}
         <div className="bg-white rounded-lg p-6 shadow-sm recipe-content">
           {/* Recipe Image with Upload Option */}
@@ -476,7 +482,7 @@ export default function RecipeDetail() {
             <h3 className="font-semibold text-gray-900">Scale Recipe</h3>
             {hasConvertibleIngredients && (
               <button
-                onClick={() => setShowGrams(!showGrams)}
+                onClick={() => setPreferGrams(!preferGrams)}
                 className={`flex items-center space-x-1 px-2 py-1 rounded text-sm font-medium transition-colors ${
                   showGrams 
                     ? 'bg-sage text-white' 
@@ -551,8 +557,9 @@ export default function RecipeDetail() {
           )}
         </div>
 
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Ingredients */}
-        <div className="bg-white rounded-lg p-6 shadow-sm recipe-content">
+        <div className="bg-white rounded-lg p-6 shadow-sm recipe-content md:sticky md:top-6 md:self-start md:max-h-[calc(100vh-8rem)] md:overflow-auto">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-bold text-gray-900">Ingredients</h2>
             <div className="flex items-center space-x-2 text-sm text-gray-600">
@@ -691,6 +698,8 @@ export default function RecipeDetail() {
           </div>
         </div>
 
+        </div>
+
         {/* Tips */}
         {recipe.tips && recipe.tips.length > 0 && (
           <div className="bg-white rounded-lg p-6 shadow-sm recipe-content">
@@ -824,7 +833,7 @@ export default function RecipeDetail() {
 
       {/* Sticky Action Bar */}
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 no-print ios-padding">
-        <div className="max-w-md mx-auto flex justify-center space-x-4">
+        <div className="max-w-md md:max-w-4xl lg:max-w-6xl mx-auto flex justify-center space-x-4">
           {!currentSession ? (
             <button
               onClick={handleStartSession}

@@ -4,8 +4,18 @@
  */
 
 import type { Recipe } from '../types';
+import { useSettings } from '../state/session';
 
 const API_BASE = '/api';
+
+function getSyncKeyHeader(): Record<string, string> {
+  try {
+    const key = (useSettings.getState().syncKey || '').trim();
+    return key ? { 'X-Crumb-Sync-Key': key } : {};
+  } catch {
+    return {};
+  }
+}
 
 export interface ApiResponse<T> {
   success: boolean;
@@ -16,7 +26,7 @@ export interface ApiResponse<T> {
 /**
  * Check if server is reachable
  */
-async function isServerAvailable(): Promise<boolean> {
+export async function checkServerHealth(): Promise<boolean> {
   try {
     const response = await fetch(`${API_BASE}/health`, { 
       method: 'HEAD',
@@ -33,7 +43,11 @@ async function isServerAvailable(): Promise<boolean> {
  */
 export async function getAllRecipes(): Promise<Recipe[]> {
   try {
-    const response = await fetch(`${API_BASE}/recipes`);
+    const response = await fetch(`${API_BASE}/recipes`, {
+      headers: {
+        ...getSyncKeyHeader()
+      }
+    });
     
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -47,7 +61,7 @@ export async function getAllRecipes(): Promise<Recipe[]> {
     
     return data.recipes || [];
   } catch (error) {
-    console.error('Failed to fetch recipes from server:', error);
+    // Avoid noisy logs: offline mode and local dev without Postgres are normal.
     throw error;
   }
 }
@@ -57,7 +71,11 @@ export async function getAllRecipes(): Promise<Recipe[]> {
  */
 export async function getRecipe(id: string): Promise<Recipe | null> {
   try {
-    const response = await fetch(`${API_BASE}/recipes/${id}`);
+    const response = await fetch(`${API_BASE}/recipes/${id}`, {
+      headers: {
+        ...getSyncKeyHeader()
+      }
+    });
     
     if (response.status === 404) {
       return null;
@@ -88,7 +106,8 @@ export async function saveRecipe(recipe: Recipe): Promise<Recipe> {
     const response = await fetch(`${API_BASE}/recipes`, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        ...getSyncKeyHeader()
       },
       body: JSON.stringify(recipe)
     });
@@ -118,7 +137,8 @@ export async function updateRecipe(id: string, recipe: Partial<Recipe>): Promise
     const response = await fetch(`${API_BASE}/recipes/${id}`, {
       method: 'PUT',
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        ...getSyncKeyHeader()
       },
       body: JSON.stringify(recipe)
     });
@@ -146,7 +166,10 @@ export async function updateRecipe(id: string, recipe: Partial<Recipe>): Promise
 export async function deleteRecipe(id: string): Promise<void> {
   try {
     const response = await fetch(`${API_BASE}/recipes/${id}`, {
-      method: 'DELETE'
+      method: 'DELETE',
+      headers: {
+        ...getSyncKeyHeader()
+      }
     });
     
     if (!response.ok) {
@@ -172,7 +195,8 @@ export async function importRecipe(url: string, saveToServer = true): Promise<Re
     const response = await fetch(`${API_BASE}/import`, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        ...getSyncKeyHeader()
       },
       body: JSON.stringify({ 
         url,

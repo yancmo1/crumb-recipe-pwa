@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import { Toaster, toast } from 'sonner';
 import { useRecipeStore } from './state/session';
@@ -55,8 +55,13 @@ if ('serviceWorker' in navigator) {
 
 function App() {
   const loadRecipes = useRecipeStore((state) => state.loadRecipes);
+  const didInitialLoad = useRef(false);
 
   useEffect(() => {
+    // In React 18 StrictMode (dev), effects run twice.
+    // Guard to avoid duplicate network calls + duplicated console noise.
+    if (didInitialLoad.current) return;
+    didInitialLoad.current = true;
     loadRecipes();
   }, [loadRecipes]);
 

@@ -1,4 +1,5 @@
 import type { IngredientToken } from '../types';
+import { useSettings } from '../state/session';
 
 // Weight conversion ratios to grams
 const WEIGHT_CONVERSIONS: Record<string, number> = {
@@ -124,6 +125,21 @@ export interface ConversionResult {
   gramsDisplay: string;
   isConvertible: boolean;
   confidence: 'high' | 'medium' | 'low';
+  source?: 'user' | 'built-in';
+}
+
+function normalizeKey(s: string): string {
+  return (s || '')
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function matchIngredientKey(item: string, key: string): boolean {
+  const a = normalizeKey(item);
+  const b = normalizeKey(key);
+  if (!a || !b) return false;
+  return a.includes(b) || b.includes(a);
 }
 
 /**
@@ -143,6 +159,28 @@ export function convertToGrams(ingredient: IngredientToken): ConversionResult {
   const amount = ingredient.amount;
   const item = ingredient.item?.toLowerCase().trim() || '';
 
+  // 0) User overrides (highest priority)
+  try {
+    const overrides = useSettings.getState().conversionOverrides || {};
+    for (const [ingredientKey, conversions] of Object.entries(overrides)) {
+      if (!conversions) continue;
+      if (!matchIngredientKey(item, ingredientKey)) continue;
+      const gramsPerUnit = conversions[unit];
+      if (typeof gramsPerUnit === 'number' && Number.isFinite(gramsPerUnit) && gramsPerUnit > 0) {
+        const grams = Math.round(amount * gramsPerUnit);
+        return {
+          grams,
+          gramsDisplay: `${grams}g`,
+          isConvertible: true,
+          confidence: 'high',
+          source: 'user'
+        };
+      }
+    }
+  } catch {
+    // Ignore settings read issues and continue with built-in conversions
+  }
+
   // Check for ingredient-specific conversions first
   for (const [ingredientName, conversions] of Object.entries(INGREDIENT_CONVERSIONS)) {
     if (item.includes(ingredientName) || ingredientName.includes(item)) {
@@ -152,7 +190,8 @@ export function convertToGrams(ingredient: IngredientToken): ConversionResult {
           grams,
           gramsDisplay: `${grams}g`,
           isConvertible: true,
-          confidence: 'high'
+          confidence: 'high',
+          source: 'built-in'
         };
       }
     }
@@ -165,7 +204,8 @@ export function convertToGrams(ingredient: IngredientToken): ConversionResult {
       grams,
       gramsDisplay: `${grams}g`,
       isConvertible: true,
-      confidence: item ? 'medium' : 'low' // Lower confidence without ingredient context
+      confidence: item ? 'medium' : 'low', // Lower confidence without ingredient context
+      source: 'built-in'
     };
   }
 

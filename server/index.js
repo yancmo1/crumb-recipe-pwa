@@ -9,7 +9,7 @@ import { parseIngredients } from './utils.js';
 import { extractRecipeImproved } from './extractors/improved-extractor.js';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
-import { initDatabase, query, toCamelCase, toSnakeCase } from './db.js';
+import { initDatabase, isDbConfigured, query, toCamelCase, toSnakeCase } from './db.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -17,18 +17,28 @@ const __dirname = dirname(__filename);
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+let dbReady = false;
+
 app.use(cors());
 app.use(express.json());
+
+function getSyncKey(req) {
+  const raw = req.get('x-crumb-sync-key') || req.get('X-Crumb-Sync-Key') || '';
+  const key = String(raw).trim();
+  return key.length ? key : 'default';
+}
 
 function rowToRecipe(row) {
   return {
     id: row.id,
+    syncKey: row.sync_key,
     title: row.title,
     image: row.image,
     author: row.author,
     sourceName: row.source_name,
     sourceUrl: row.source_url,
     category: row.category ?? undefined,
+    tags: row.tags ?? undefined,
     isFavorite: row.is_favorite ?? false,
     yield: row.yield,
     servings: row.servings,
@@ -38,6 +48,7 @@ function rowToRecipe(row) {
     tips: row.tips,
     notes: row.notes,
     nutrition: row.nutrition,
+    conversionOverrides: row.conversion_overrides ?? undefined,
     createdAt: row.created_at,
     updatedAt: row.updated_at
   };
@@ -72,6 +83,7 @@ app.get('/api/health', (req, res) => {
 app.post('/api/import', async (req, res) => {
   try {
     const { url, useImprovedExtractor = true, saveToServer = true, includeDebug = false } = req.body;
+    const syncKey = getSyncKey(req);
     
     if (!url) {
       return res.status(400).json({
@@ -96,14 +108,16 @@ app.post('/api/import', async (req, res) => {
     }
     
     // Optionally save to database
-    if (saveToServer) {
+    if (saveToServer && dbReady) {
       try {
-        recipe = await saveRecipe(recipe);
+        recipe = await saveRecipe(recipe, syncKey);
         console.log(`✓ Recipe saved to database: ${recipe.id}`);
       } catch (dbError) {
         console.error('Failed to save recipe to database:', dbError);
         // Don't fail the import if DB save fails
       }
+    } else if (saveToServer && !dbReady) {
+      console.warn('Skipping server save during import (database unavailable)');
     }
     
     res.json({
@@ -121,11 +135,23 @@ app.post('/api/import', async (req, res) => {
   }
 });
 
+function requireDb(req, res, next) {
+  if (dbReady) return next();
+  return res.status(503).json({
+    success: false,
+    error: isDbConfigured()
+      ? 'Database unavailable'
+      : 'Database not configured (set DATABASE_URL)'
+  });
+}
+
 // Get all recipes
-app.get('/api/recipes', async (req, res) => {
+app.get('/api/recipes', requireDb, async (req, res) => {
   try {
+    const syncKey = getSyncKey(req);
     const result = await query(
-      'SELECT * FROM recipes ORDER BY created_at DESC'
+      'SELECT * FROM recipes WHERE sync_key = $1 ORDER BY created_at DESC',
+      [syncKey]
     );
 
     const recipes = result.rows.map(rowToRecipe);
@@ -141,10 +167,11 @@ app.get('/api/recipes', async (req, res) => {
 });
 
 // Get single recipe
-app.get('/api/recipes/:id', async (req, res) => {
+app.get('/api/recipes/:id', requireDb, async (req, res) => {
   try {
+    const syncKey = getSyncKey(req);
     const { id } = req.params;
-    const result = await query('SELECT * FROM recipes WHERE id = $1', [id]);
+    const result = await query('SELECT * FROM recipes WHERE id = $1 AND sync_key = $2', [id, syncKey]);
     
     if (result.rows.length === 0) {
       return res.status(404).json({
@@ -166,10 +193,11 @@ app.get('/api/recipes/:id', async (req, res) => {
 });
 
 // Save/create recipe
-app.post('/api/recipes', async (req, res) => {
+app.post('/api/recipes', requireDb, async (req, res) => {
   try {
+    const syncKey = getSyncKey(req);
     const recipe = req.body;
-    const saved = await saveRecipe(recipe);
+    const saved = await saveRecipe(recipe, syncKey);
     res.json({ success: true, recipe: saved });
   } catch (error) {
     console.error('Error saving recipe:', error);
@@ -181,12 +209,13 @@ app.post('/api/recipes', async (req, res) => {
 });
 
 // Update recipe
-app.put('/api/recipes/:id', async (req, res) => {
+app.put('/api/recipes/:id', requireDb, async (req, res) => {
   try {
+    const syncKey = getSyncKey(req);
     const { id } = req.params;
 
     // Support partial updates safely by first loading the existing row.
-    const existingRes = await query('SELECT * FROM recipes WHERE id = $1', [id]);
+    const existingRes = await query('SELECT * FROM recipes WHERE id = $1 AND sync_key = $2', [id, syncKey]);
     if (existingRes.rows.length === 0) {
       return res.status(404).json({
         success: false,
@@ -199,6 +228,7 @@ app.put('/api/recipes/:id', async (req, res) => {
       ...existing,
       ...req.body,
       id,
+      syncKey,
       createdAt: existing.createdAt,
       updatedAt: Date.now()
     };
@@ -212,17 +242,19 @@ app.put('/api/recipes/:id', async (req, res) => {
         source_name = $4,
         source_url = $5,
         category = $6,
-        is_favorite = $7,
-        yield = $8,
-        servings = $9,
-        times = $10,
-        ingredients = $11,
-        steps = $12,
-        tips = $13,
-        notes = $14,
-        nutrition = $15,
-        updated_at = $16
-      WHERE id = $17
+        tags = $7,
+        is_favorite = $8,
+        yield = $9,
+        servings = $10,
+        times = $11,
+        ingredients = $12,
+        steps = $13,
+        tips = $14,
+        notes = $15,
+        nutrition = $16,
+        conversion_overrides = $17,
+        updated_at = $18
+      WHERE id = $19 AND sync_key = $20
       RETURNING *`,
       [
         merged.title,
@@ -231,6 +263,7 @@ app.put('/api/recipes/:id', async (req, res) => {
         merged.sourceName,
         merged.sourceUrl,
         normalized.category,
+        JSON.stringify(merged.tags || null),
         normalized.isFavorite,
         merged.yield,
         merged.servings,
@@ -240,8 +273,10 @@ app.put('/api/recipes/:id', async (req, res) => {
         JSON.stringify(merged.tips),
         merged.notes,
         JSON.stringify(merged.nutrition),
+        JSON.stringify(merged.conversionOverrides || null),
         merged.updatedAt,
-        id
+        id,
+        syncKey
       ]
     );
     
@@ -263,10 +298,11 @@ app.put('/api/recipes/:id', async (req, res) => {
 });
 
 // Delete recipe
-app.delete('/api/recipes/:id', async (req, res) => {
+app.delete('/api/recipes/:id', requireDb, async (req, res) => {
   try {
+    const syncKey = getSyncKey(req);
     const { id } = req.params;
-    const result = await query('DELETE FROM recipes WHERE id = $1 RETURNING id', [id]);
+    const result = await query('DELETE FROM recipes WHERE id = $1 AND sync_key = $2 RETURNING id', [id, syncKey]);
     
     if (result.rows.length === 0) {
       return res.status(404).json({
@@ -286,20 +322,22 @@ app.delete('/api/recipes/:id', async (req, res) => {
 });
 
 // Helper function to save recipe to database
-async function saveRecipe(recipe) {
+async function saveRecipe(recipe, syncKey = 'default') {
   const normalized = normalizeRecipeForDb(recipe);
   const result = await query(
     `INSERT INTO recipes (
-      id, title, image, author, source_name, source_url, category, is_favorite, yield, servings,
-      times, ingredients, steps, tips, notes, nutrition, created_at, updated_at
-    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
+      id, sync_key, title, image, author, source_name, source_url, category, tags, is_favorite, yield, servings,
+      times, ingredients, steps, tips, notes, nutrition, conversion_overrides, created_at, updated_at
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)
     ON CONFLICT (id) DO UPDATE SET
       title = EXCLUDED.title,
+      sync_key = EXCLUDED.sync_key,
       image = EXCLUDED.image,
       author = EXCLUDED.author,
       source_name = EXCLUDED.source_name,
       source_url = EXCLUDED.source_url,
       category = EXCLUDED.category,
+      tags = EXCLUDED.tags,
       is_favorite = EXCLUDED.is_favorite,
       yield = EXCLUDED.yield,
       servings = EXCLUDED.servings,
@@ -309,16 +347,19 @@ async function saveRecipe(recipe) {
       tips = EXCLUDED.tips,
       notes = EXCLUDED.notes,
       nutrition = EXCLUDED.nutrition,
+      conversion_overrides = EXCLUDED.conversion_overrides,
       updated_at = EXCLUDED.updated_at
     RETURNING *`,
     [
       recipe.id,
+      syncKey,
       recipe.title,
       recipe.image,
       recipe.author,
       recipe.sourceName,
       recipe.sourceUrl,
       normalized.category,
+      JSON.stringify(recipe.tags || null),
       normalized.isFavorite,
       recipe.yield,
       recipe.servings,
@@ -328,6 +369,7 @@ async function saveRecipe(recipe) {
       JSON.stringify(recipe.tips),
       recipe.notes,
       JSON.stringify(recipe.nutrition),
+      JSON.stringify(recipe.conversionOverrides || null),
       recipe.createdAt,
       recipe.updatedAt
     ]
@@ -1364,15 +1406,30 @@ app.get('*', (req, res) => {
 
 // Initialize database and start server
 (async () => {
-  try {
-    await initDatabase();
-    console.log('✓ Database initialized');
-    
+  if (!isDbConfigured()) {
+    dbReady = false;
+    console.warn('⚠ Database not configured - API will run in offline-only mode');
     app.listen(PORT, () => {
       console.log(`Recipe import server running on port ${PORT}`);
+      console.log('→ Recipe CRUD disabled until DATABASE_URL is configured');
     });
-  } catch (error) {
-    console.error('Failed to start server:', error);
-    process.exit(1);
+    return;
   }
+
+  try {
+    await initDatabase();
+    dbReady = true;
+    console.log('✓ Database initialized');
+  } catch (error) {
+    dbReady = false;
+    console.warn('⚠ Database not ready - API will run in offline-only mode');
+    console.error(error);
+  }
+
+  app.listen(PORT, () => {
+    console.log(`Recipe import server running on port ${PORT}`);
+    if (!dbReady) {
+      console.log('→ Recipe CRUD disabled until DATABASE_URL is configured');
+    }
+  });
 })();

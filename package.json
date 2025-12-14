@@ -10,6 +10,7 @@
     "test": "vitest",
     "test:e2e": "playwright test",
     "server": "node server/index.js",
+    "server:dev": "node --watch --watch-path=server server/index.js",
     "docker:build": "docker build -t crumb .",
     "docker:run": "docker run -p 5554:5554 -e PORT=5554 crumb",
     "docker:dev": "docker compose -f docker-compose.dev.yml up --build"
