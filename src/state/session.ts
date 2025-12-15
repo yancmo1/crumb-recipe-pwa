@@ -270,9 +270,7 @@ interface SettingsStore {
   theme: 'light' | 'dark' | 'system';
   keepSessionsOnClose: boolean;
   autoExtendSessions: boolean;
-<<<<<<< HEAD
-  preferGrams: boolean;
-=======
+
   /** Prefer showing gram conversions when available. */
   preferGrams: boolean;
 
@@ -288,18 +286,14 @@ interface SettingsStore {
    * }
    */
   conversionOverrides: Record<string, Record<string, number>>;
->>>>>>> New-improvements-from-gpt5.2-suggestions
-  
+
   setTheme: (theme: 'light' | 'dark' | 'system') => void;
   setKeepSessionsOnClose: (keep: boolean) => void;
   setAutoExtendSessions: (auto: boolean) => void;
   setPreferGrams: (prefer: boolean) => void;
-<<<<<<< HEAD
-=======
   setSyncKey: (key: string) => void;
   upsertConversionOverride: (ingredientKey: string, unit: string, gramsPerUnit: number) => void;
   removeConversionOverride: (ingredientKey: string, unit: string) => void;
->>>>>>> New-improvements-from-gpt5.2-suggestions
 }
 
 export const useSettings = create<SettingsStore>()(
@@ -308,23 +302,18 @@ export const useSettings = create<SettingsStore>()(
       theme: 'light',
       keepSessionsOnClose: false,
       autoExtendSessions: true,
-<<<<<<< HEAD
+
       // Default to grams: most serious home cooks use weight.
       // If an existing user has older persisted settings without this field,
       // Zustand will fall back to this default.
       preferGrams: true,
-=======
-      preferGrams: true,
+
       syncKey: '',
       conversionOverrides: {},
->>>>>>> New-improvements-from-gpt5.2-suggestions
-      
+
       setTheme: (theme) => set({ theme }),
       setKeepSessionsOnClose: (keepSessionsOnClose) => set({ keepSessionsOnClose }),
       setAutoExtendSessions: (autoExtendSessions) => set({ autoExtendSessions }),
-<<<<<<< HEAD
-      setPreferGrams: (preferGrams) => set({ preferGrams })
-=======
       setPreferGrams: (preferGrams) => set({ preferGrams }),
       setSyncKey: (syncKey) => set({ syncKey: (syncKey || '').trim() }),
       upsertConversionOverride: (ingredientKey, unit, gramsPerUnit) => {
@@ -358,7 +347,6 @@ export const useSettings = create<SettingsStore>()(
         }
         set({ conversionOverrides: next });
       }
->>>>>>> New-improvements-from-gpt5.2-suggestions
     }),
     {
       name: 'crumb-settings'

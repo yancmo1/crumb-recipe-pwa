@@ -12,17 +12,13 @@ export default function Settings() {
     setTheme,
     keepSessionsOnClose,
     setKeepSessionsOnClose,
-    preferGrams,
-<<<<<<< HEAD
-    setPreferGrams
-=======
-    setPreferGrams,
     syncKey,
     setSyncKey,
+    preferGrams,
+    setPreferGrams,
     conversionOverrides,
     upsertConversionOverride,
     removeConversionOverride
->>>>>>> New-improvements-from-gpt5.2-suggestions
   } = useSettings();
   const { recipes, loadRecipes } = useRecipeStore();
   const [isExporting, setIsExporting] = useState(false);
