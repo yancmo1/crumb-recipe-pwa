@@ -37,9 +37,9 @@ export class CrumbDB extends Dexie {
   
   private async checkServer(): Promise<void> {
     try {
-      await api.getAllRecipes();
-      this.serverAvailable = true;
-      console.log('✓ Server connection established');
+      const ok = await api.checkServerHealth();
+      this.serverAvailable = ok;
+      if (ok) console.log('✓ Server connection established');
     } catch {
       this.serverAvailable = false;
       console.warn('⚠ Server unavailable - using offline cache');

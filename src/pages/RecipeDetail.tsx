@@ -24,7 +24,6 @@ export default function RecipeDetail() {
   } = useCookSession();
   
   const [recipe, setRecipe] = useState<Recipe | null>(null);
-  const showGrams = preferGrams;
   const [currentMultiplier, setCurrentMultiplier] = useState(1); // Local multiplier state
   const [selectedMultiplier, setSelectedMultiplier] = useState('1');
   const [showCustomInput, setShowCustomInput] = useState(false);
@@ -86,7 +85,6 @@ export default function RecipeDetail() {
 
   // Use local multiplier, fallback to session multiplier
   const multiplier = currentMultiplier || currentSession?.multiplier || 1;
-  const scaledIngredients = scaleIngredients(recipe.ingredients, multiplier, showGrams);
   const timeRemaining = getTimeRemaining();
   const hoursRemaining = Math.floor(timeRemaining / (1000 * 60 * 60));
   const minutesRemaining = Math.floor((timeRemaining % (1000 * 60 * 60)) / (1000 * 60));
@@ -95,6 +93,11 @@ export default function RecipeDetail() {
   const hasConvertibleIngredients = recipe.ingredients.some(ingredient => 
     isConvertibleToGrams(ingredient)
   );
+
+  // Only enable grams mode when it can actually do something.
+  const showGrams = preferGrams && hasConvertibleIngredients;
+
+  const scaledIngredients = scaleIngredients(recipe.ingredients, multiplier, showGrams);
 
   const sourceHost = (() => {
     try {
@@ -572,7 +575,7 @@ export default function RecipeDetail() {
                 )}
               </div>
             </div>
-            
+
             <div className="space-y-3">
               {scaledIngredients.map((ingredient, index) => {
                 // Render group headers differently
@@ -587,7 +590,7 @@ export default function RecipeDetail() {
                     </h3>
                   );
                 }
-                
+
                 // Regular ingredient with checkbox
                 return (
                   <div
@@ -612,39 +615,39 @@ export default function RecipeDetail() {
                     ) : (
                       <div className="mt-1 w-5 h-5 rounded border-2 border-gray-300 flex-shrink-0 print-only"></div>
                     )}
-                    
+
                     <span className={`text-gray-900 ${currentSession?.checkedIngredients[index] ? 'line-through opacity-60' : ''}`}>
-                    {(() => {
-                      if (showGrams && ingredient.gramsDisplay) {
-                        // Show grams conversion
-                        const item = ingredient.item;
-                        const note = ingredient.note;
-                        
-                        return [
-                          ingredient.gramsDisplay,
-                          item && ` ${item}`,
-                          note && ` (${note})`
-                        ].filter(Boolean).join('');
-                      } else {
-                        // Show original measurements
-                        const amount = getIngredientDisplayAmount(ingredient, false);
-                        const unit = ingredient.unit;
-                        const item = ingredient.item;
-                        const note = ingredient.note;
-                        
-                        return [
-                          amount,
-                          unit && ` ${unit}`,
-                          item && ` ${item}`,
-                          note && ` (${note})`
-                        ].filter(Boolean).join('');
-                      }
-                    })()}
-                    {showGrams && !ingredient.gramsDisplay && (
-                      <span className="text-gray-500 text-sm ml-2">(conversion not available)</span>
-                    )}
-                  </span>
-                </div>
+                      {(() => {
+                        if (showGrams && ingredient.gramsDisplay) {
+                          // Show grams conversion
+                          const item = ingredient.item;
+                          const note = ingredient.note;
+
+                          return [
+                            ingredient.gramsDisplay,
+                            item && ` ${item}`,
+                            note && ` (${note})`
+                          ].filter(Boolean).join('');
+                        } else {
+                          // Show original measurements
+                          const amount = getIngredientDisplayAmount(ingredient, false);
+                          const unit = ingredient.unit;
+                          const item = ingredient.item;
+                          const note = ingredient.note;
+
+                          return [
+                            amount,
+                            unit && ` ${unit}`,
+                            item && ` ${item}`,
+                            note && ` (${note})`
+                          ].filter(Boolean).join('');
+                        }
+                      })()}
+                      {showGrams && !ingredient.gramsDisplay && (
+                        <span className="text-gray-500 text-sm ml-2">(conversion not available)</span>
+                      )}
+                    </span>
+                  </div>
                 );
               })}
             </div>
@@ -653,7 +656,7 @@ export default function RecipeDetail() {
           {/* Instructions */}
           <section className="bg-white rounded-lg p-6 shadow-sm recipe-content" aria-label="Instructions">
             <h2 className="text-xl font-bold text-gray-900 mb-4">Instructions</h2>
-            
+
             <div className="space-y-4">
               {recipe.steps.map((step, index) => {
                 // Render section headers (e.g. "**Levain:**") without checkboxes

@@ -242,6 +242,9 @@ export const useRecipeStore = create<RecipeStore>((set, get) => ({
           return recipes.filter(recipe => 
             recipe.title.toLowerCase().includes(query) ||
             recipe.sourceName?.toLowerCase().includes(query) ||
+            recipe.notes?.toLowerCase().includes(query) ||
+            recipe.steps?.some((s) => s.toLowerCase().includes(query)) ||
+            recipe.tags?.some((t) => t.toLowerCase().includes(query)) ||
             recipe.ingredients.some(ing => 
               ing.raw.toLowerCase().includes(query) ||
               ing.item?.toLowerCase().includes(query)
@@ -267,29 +270,83 @@ interface SettingsStore {
   theme: 'light' | 'dark' | 'system';
   keepSessionsOnClose: boolean;
   autoExtendSessions: boolean;
+
+  /** Prefer showing gram conversions when available. */
   preferGrams: boolean;
-  
+
+  /** Optional shared key to scope server-side sync across devices. */
+  syncKey: string;
+
+  /**
+   * User overrides for ingredient/unit → grams.
+   * Example:
+   * {
+   *   "bread flour": { "cup": 120 },
+   *   "sugar": { "cup": 200 }
+   * }
+   */
+  conversionOverrides: Record<string, Record<string, number>>;
+
   setTheme: (theme: 'light' | 'dark' | 'system') => void;
   setKeepSessionsOnClose: (keep: boolean) => void;
   setAutoExtendSessions: (auto: boolean) => void;
   setPreferGrams: (prefer: boolean) => void;
+  setSyncKey: (key: string) => void;
+  upsertConversionOverride: (ingredientKey: string, unit: string, gramsPerUnit: number) => void;
+  removeConversionOverride: (ingredientKey: string, unit: string) => void;
 }
 
 export const useSettings = create<SettingsStore>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       theme: 'light',
       keepSessionsOnClose: false,
       autoExtendSessions: true,
+
       // Default to grams: most serious home cooks use weight.
       // If an existing user has older persisted settings without this field,
       // Zustand will fall back to this default.
       preferGrams: true,
-      
+
+      syncKey: '',
+      conversionOverrides: {},
+
       setTheme: (theme) => set({ theme }),
       setKeepSessionsOnClose: (keepSessionsOnClose) => set({ keepSessionsOnClose }),
       setAutoExtendSessions: (autoExtendSessions) => set({ autoExtendSessions }),
-      setPreferGrams: (preferGrams) => set({ preferGrams })
+      setPreferGrams: (preferGrams) => set({ preferGrams }),
+      setSyncKey: (syncKey) => set({ syncKey: (syncKey || '').trim() }),
+      upsertConversionOverride: (ingredientKey, unit, gramsPerUnit) => {
+        const key = (ingredientKey || '').trim().toLowerCase();
+        const u = (unit || '').trim().toLowerCase();
+        const g = Number(gramsPerUnit);
+        if (!key || !u || !Number.isFinite(g) || g <= 0) return;
+        const prev = get().conversionOverrides;
+        set({
+          conversionOverrides: {
+            ...prev,
+            [key]: {
+              ...(prev[key] || {}),
+              [u]: g
+            }
+          }
+        });
+      },
+      removeConversionOverride: (ingredientKey, unit) => {
+        const key = (ingredientKey || '').trim().toLowerCase();
+        const u = (unit || '').trim().toLowerCase();
+        if (!key || !u) return;
+        const prev = get().conversionOverrides;
+        const nextUnits = { ...(prev[key] || {}) };
+        delete nextUnits[u];
+        const next = { ...prev };
+        if (Object.keys(nextUnits).length === 0) {
+          delete next[key];
+        } else {
+          next[key] = nextUnits;
+        }
+        set({ conversionOverrides: next });
+      }
     }),
     {
       name: 'crumb-settings'

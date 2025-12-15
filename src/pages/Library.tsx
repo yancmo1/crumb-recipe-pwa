@@ -77,7 +77,7 @@ export default function Library() {
     <div className="min-h-screen bg-oatmeal">
       {/* Header */}
       <header className="bg-white shadow-sm border-b border-gray-200">
-        <div className="max-w-md mx-auto px-4 py-4">
+        <div className="max-w-md md:max-w-3xl lg:max-w-5xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
               <ChefHat className="h-8 w-8 text-blueberry" />
@@ -93,7 +93,7 @@ export default function Library() {
         </div>
       </header>
 
-      <div className="max-w-md mx-auto px-4 py-6">
+      <div className="max-w-md md:max-w-3xl lg:max-w-5xl mx-auto px-4 py-6">
         {/* Search */}
         <div className="relative mb-6">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />

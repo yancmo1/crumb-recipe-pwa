@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Download, Upload, Moon, Sun, Trash2 } from 'lucide-react';
+import { ArrowLeft, Download, Upload, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useSettings, useRecipeStore } from '../state/session';
 import { db } from '../db';
@@ -12,13 +12,22 @@ export default function Settings() {
     setTheme,
     keepSessionsOnClose,
     setKeepSessionsOnClose,
+    syncKey,
+    setSyncKey,
     preferGrams,
-    setPreferGrams
+    setPreferGrams,
+    conversionOverrides,
+    upsertConversionOverride,
+    removeConversionOverride
   } = useSettings();
   const { recipes, loadRecipes } = useRecipeStore();
   const [isExporting, setIsExporting] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
   const [isClearingData, setIsClearingData] = useState(false);
+
+  const [overrideIngredientKey, setOverrideIngredientKey] = useState('');
+  const [overrideUnit, setOverrideUnit] = useState('');
+  const [overrideGramsPerUnit, setOverrideGramsPerUnit] = useState('');
 
   const handleExportData = async () => {
     setIsExporting(true);
@@ -101,11 +110,23 @@ export default function Settings() {
     }
   };
 
+  const handleAddOverride = () => {
+    upsertConversionOverride(
+      overrideIngredientKey,
+      overrideUnit,
+      Number(overrideGramsPerUnit)
+    );
+    setOverrideIngredientKey('');
+    setOverrideUnit('');
+    setOverrideGramsPerUnit('');
+    toast.success('Conversion override saved');
+  };
+
   return (
     <div className="min-h-screen bg-oatmeal">
       {/* Header */}
       <header className="bg-white shadow-sm border-b border-gray-200">
-        <div className="max-w-md mx-auto px-4 py-4">
+        <div className="max-w-md md:max-w-3xl lg:max-w-5xl mx-auto px-4 py-4">
           <div className="flex items-center space-x-4">
             <button
               onClick={() => navigate('/')}
@@ -119,7 +140,7 @@ export default function Settings() {
         </div>
       </header>
 
-      <div className="max-w-md mx-auto px-4 py-6 space-y-6">
+  <div className="max-w-md md:max-w-3xl lg:max-w-5xl mx-auto px-4 py-6 space-y-6">
         {/* Theme Settings */}
         <div className="bg-white rounded-lg p-6 shadow-sm">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">Appearance</h2>
@@ -137,6 +158,124 @@ export default function Settings() {
                 <option value="system">System</option>
               </select>
             </label>
+          </div>
+        </div>
+
+        {/* Measurement Settings */}
+        <div className="bg-white rounded-lg p-6 shadow-sm">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">Measurements</h2>
+
+          <div className="space-y-4">
+            <label className="flex items-center justify-between">
+              <div>
+                <span className="text-gray-700">Prefer grams by default</span>
+                <p className="text-sm text-gray-500">When conversions are available, show ingredient weights in grams</p>
+              </div>
+              <input
+                type="checkbox"
+                checked={preferGrams}
+                onChange={(e) => setPreferGrams(e.target.checked)}
+                className="w-5 h-5 text-blueberry rounded focus:ring-blueberry"
+              />
+            </label>
+          </div>
+        </div>
+
+        {/* Sync Settings */}
+        <div className="bg-white rounded-lg p-6 shadow-sm">
+          <h2 className="text-lg font-semibold text-gray-900 mb-2">Sync</h2>
+          <p className="text-sm text-gray-500 mb-4">
+            Use the same sync key on multiple devices to share the same recipe library (no account required).
+          </p>
+
+          <label className="block">
+            <span className="text-sm font-medium text-gray-700">Sync key</span>
+            <input
+              value={syncKey}
+              onChange={(e) => setSyncKey(e.target.value)}
+              placeholder="e.g., family-kitchen"
+              className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blueberry focus:border-transparent"
+            />
+          </label>
+        </div>
+
+        {/* Conversion Overrides */}
+        <div className="bg-white rounded-lg p-6 shadow-sm">
+          <h2 className="text-lg font-semibold text-gray-900 mb-2">Conversion Overrides</h2>
+          <p className="text-sm text-gray-500 mb-4">
+            Add your own ingredient/unit → grams conversions. These are used before built-in conversions.
+          </p>
+
+          <div className="space-y-3">
+            <div className="grid grid-cols-1 gap-2">
+              <input
+                value={overrideIngredientKey}
+                onChange={(e) => setOverrideIngredientKey(e.target.value)}
+                placeholder="Ingredient (e.g., bread flour)"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blueberry focus:border-transparent"
+              />
+              <div className="grid grid-cols-3 gap-2">
+                <input
+                  value={overrideUnit}
+                  onChange={(e) => setOverrideUnit(e.target.value)}
+                  placeholder="Unit (cup)"
+                  className="col-span-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blueberry focus:border-transparent"
+                />
+                <input
+                  value={overrideGramsPerUnit}
+                  onChange={(e) => setOverrideGramsPerUnit(e.target.value)}
+                  placeholder="g per unit"
+                  type="number"
+                  inputMode="decimal"
+                  min="0"
+                  step="0.1"
+                  className="col-span-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blueberry focus:border-transparent"
+                />
+                <button
+                  type="button"
+                  onClick={handleAddOverride}
+                  disabled={!overrideIngredientKey.trim() || !overrideUnit.trim() || !overrideGramsPerUnit.trim()}
+                  className="col-span-1 px-3 py-2 bg-blueberry text-white rounded-lg hover:bg-blueberry/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  Add
+                </button>
+              </div>
+            </div>
+
+            <div className="border-t border-gray-200 pt-4">
+              {Object.keys(conversionOverrides).length === 0 ? (
+                <p className="text-sm text-gray-500">No overrides yet.</p>
+              ) : (
+                <div className="space-y-3">
+                  {Object.entries(conversionOverrides)
+                    .sort(([a], [b]) => a.localeCompare(b))
+                    .map(([ingredientKey, units]) => (
+                      <div key={ingredientKey} className="bg-gray-50 rounded-lg p-3">
+                        <div className="font-medium text-gray-900">{ingredientKey}</div>
+                        <div className="mt-2 space-y-1">
+                          {Object.entries(units)
+                            .sort(([a], [b]) => a.localeCompare(b))
+                            .map(([unit, gramsPerUnit]) => (
+                              <div key={`${ingredientKey}:${unit}`} className="flex items-center justify-between text-sm">
+                                <span className="text-gray-700">
+                                  1 {unit} = {gramsPerUnit} g
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => removeConversionOverride(ingredientKey, unit)}
+                                  className="text-red-700 hover:text-red-800"
+                                  aria-label={`Remove override ${ingredientKey} ${unit}`}
+                                >
+                                  Remove
+                                </button>
+                              </div>
+                            ))}
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              )}
+            </div>
           </div>
         </div>
 

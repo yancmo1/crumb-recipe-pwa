@@ -53,7 +53,7 @@ export default function ImportRecipe() {
     <div className="min-h-screen bg-oatmeal">
       {/* Header */}
       <header className="bg-white shadow-sm border-b border-gray-200">
-        <div className="max-w-md mx-auto px-4 py-4">
+        <div className="max-w-md md:max-w-3xl lg:max-w-5xl mx-auto px-4 py-4">
           <div className="flex items-center space-x-4">
             <button
               onClick={() => navigate(-1)}
@@ -67,7 +67,7 @@ export default function ImportRecipe() {
         </div>
       </header>
 
-      <div className="max-w-md mx-auto px-4 py-6">
+      <div className="max-w-md md:max-w-3xl lg:max-w-5xl mx-auto px-4 py-6">
         <div className="bg-white rounded-lg p-6 shadow-sm">
           <div className="flex items-center space-x-2 mb-4">
             <Link2 className="h-5 w-5 text-blueberry" />

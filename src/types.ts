@@ -35,10 +35,14 @@ export type Recipe = {
    * Free-form so users can add their own.
    */
   category?: string;
+  /** Optional tag list for organization and filtering. */
+  tags?: string[];
   /**
    * User favorite flag. Favorites are sorted to the top of the library.
    */
   isFavorite?: boolean;
+  /** Optional per-recipe ingredient/unit → grams overrides. */
+  conversionOverrides?: Record<string, Record<string, number>>;
   yield?: string;      // e.g., "12 pancakes"
   servings?: number;   // numeric serving size if known
   times?: { prep?: number; cook?: number; total?: number }; // minutes
@@ -129,6 +133,12 @@ export type Settings = {
   theme: Theme;
   keepSessionsOnClose: boolean;
   autoExtendSessions: boolean;
+  /** Prefer showing gram conversions when available. */
+  preferGrams: boolean;
+  /** Optional shared key to scope server-side sync across devices. */
+  syncKey: string;
+  /** User overrides for ingredient/unit → grams. */
+  conversionOverrides: Record<string, Record<string, number>>;
 };
 
 // JSON-LD Schema.org types for parsing

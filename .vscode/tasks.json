@@ -25,6 +25,7 @@
       "problemMatcher": []
     },
     {
+<<<<<<< HEAD
       "label": "Dev: Backend (Express)",
       "type": "shell",
       "command": "npm run server",
@@ -85,6 +86,55 @@
         "Dev: Full stack (Vite + API)"
       ],
       "problemMatcher": []
+=======
+      "label": "Server: Update + Restart crumb (infra-new)",
+      "type": "shell",
+      "command": "ssh -t yancmo@100.105.31.42 'set -euo pipefail; echo \"Updating crumb (pull + recreate)\"; sudo docker compose -p infra-new -f /opt/infra-new/compose/docker-compose.yml pull crumb; sudo docker compose -p infra-new -f /opt/infra-new/compose/docker-compose.yml up -d --force-recreate crumb; echo; echo \"--- docker compose ps crumb\"; sudo docker compose -p infra-new -f /opt/infra-new/compose/docker-compose.yml ps crumb; echo; echo \"--- last 80 lines crumb logs\"; sudo docker logs --tail 80 infra-new-crumb-1 2>/dev/null || true'",
+      "problemMatcher": [],
+      "group": {
+        "kind": "build",
+        "isDefault": false
+      }
+    },
+    {
+      "label": "Dev: Start Backend (hot reload)",
+      "type": "shell",
+      "command": "set -euo pipefail; PORT=3000 npm run server:dev",
+      "isBackground": true,
+      "problemMatcher": []
+    },
+    {
+      "label": "Dev: Start Frontend (Vite)",
+      "type": "shell",
+      "command": "set -euo pipefail; npm run dev",
+      "isBackground": true,
+      "problemMatcher": []
+    },
+    {
+      "label": "Dev: Stop Backend (port 3000)",
+      "type": "shell",
+      "command": "set -euo pipefail; pids=$(lsof -ti tcp:3000 || true); if [[ -n \"$pids\" ]]; then echo \"Killing backend on :3000 ($pids)\"; kill $pids || true; fi",
+      "problemMatcher": []
+    },
+    {
+      "label": "Dev: Stop Frontend (port 5173)",
+      "type": "shell",
+      "command": "set -euo pipefail; pids=$(lsof -ti tcp:5173 || true); if [[ -n \"$pids\" ]]; then echo \"Killing Vite on :5173 ($pids)\"; kill $pids || true; fi",
+      "problemMatcher": []
+    },
+    {
+      "label": "Dev: Restart Full Stack (Stop + Start)",
+      "type": "shell",
+      "command": "echo 'Restarting full stack…'",
+      "problemMatcher": [],
+      "dependsOrder": "sequence",
+      "dependsOn": [
+        "Dev: Stop Frontend (port 5173)",
+        "Dev: Stop Backend (port 3000)",
+        "Dev: Start Backend (hot reload)",
+        "Dev: Start Frontend (Vite)"
+      ]
+>>>>>>> New-improvements-from-gpt5.2-suggestions
     }
   ]
 }
