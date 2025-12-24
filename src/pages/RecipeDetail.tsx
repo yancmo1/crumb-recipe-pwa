@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { useRecipeStore, useCookSession, useSettings } from '../state/session';
 import { scaleIngredients, formatFraction, getMultiplierOptions, getIngredientDisplayAmount } from '../utils/scale';
 import { isConvertibleToGrams } from '../utils/conversions';
+import { StepTimers } from '../components/StepTimer';
 import type { Recipe } from '../types';
 
 export default function RecipeDetail() {
@@ -691,9 +692,15 @@ export default function RecipeDetail() {
                       </span>
                     )}
 
-                    <p className={`text-gray-900 ${currentSession?.checkedSteps[index] ? 'line-through opacity-60' : ''}`}>
-                      {step}
-                    </p>
+                    <div className="flex-1">
+                      <p className={`text-gray-900 ${currentSession?.checkedSteps[index] ? 'line-through opacity-60' : ''}`}>
+                        {step}
+                      </p>
+                      <StepTimers
+                        stepText={step}
+                        onTimerComplete={(label) => toast.success(`Timer done${label ? ` (${label})` : ''}`)}
+                      />
+                    </div>
                   </div>
                 );
               })}
