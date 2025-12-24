@@ -159,6 +159,44 @@ export async function initDatabase() {
     await client.query(`
       CREATE INDEX IF NOT EXISTS idx_cook_sessions_expires_at ON cook_sessions(expires_at)
     `);
+
+    // --- Web Push (background timer alerts) ---
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS push_subscriptions (
+        client_id TEXT PRIMARY KEY,
+        subscription JSONB NOT NULL,
+        updated_at BIGINT NOT NULL
+      )
+    `);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS push_schedules (
+        id TEXT PRIMARY KEY,
+        client_id TEXT NOT NULL REFERENCES push_subscriptions(client_id) ON DELETE CASCADE,
+        fire_at BIGINT NOT NULL,
+        payload JSONB NOT NULL,
+        status TEXT NOT NULL DEFAULT 'scheduled',
+        created_at BIGINT NOT NULL,
+        sent_at BIGINT,
+        cancelled_at BIGINT,
+        error TEXT
+      )
+    `);
+
+    // Lightweight migrations
+    await client.query(`ALTER TABLE push_schedules ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'scheduled'`);
+    await client.query(`ALTER TABLE push_schedules ADD COLUMN IF NOT EXISTS created_at BIGINT NOT NULL DEFAULT 0`);
+    await client.query(`ALTER TABLE push_schedules ADD COLUMN IF NOT EXISTS sent_at BIGINT`);
+    await client.query(`ALTER TABLE push_schedules ADD COLUMN IF NOT EXISTS cancelled_at BIGINT`);
+    await client.query(`ALTER TABLE push_schedules ADD COLUMN IF NOT EXISTS error TEXT`);
+
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_push_schedules_fire_at ON push_schedules(fire_at)
+    `);
+
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_push_schedules_status ON push_schedules(status)
+    `);
     
     await client.query('COMMIT');
     console.log('✓ Database schema initialized successfully');

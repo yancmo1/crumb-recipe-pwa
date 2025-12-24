@@ -10,6 +10,14 @@ import { extractRecipeImproved } from './extractors/improved-extractor.js';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import { initDatabase, isDbConfigured, query, toCamelCase, toSnakeCase } from './db.js';
+import {
+  cancelScheduledPush,
+  getVapidPublicKey,
+  initPushScheduler,
+  isPushConfigured,
+  schedulePushNotification,
+  upsertPushSubscription
+} from './push.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -79,6 +87,17 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+// Web Push (background/lock-screen notifications)
+app.get('/api/push/vapid-public-key', (req, res) => {
+  if (!isPushConfigured()) {
+    return res.status(503).json({
+      success: false,
+      error: 'Web Push not configured (set VAPID_PUBLIC_KEY/VAPID_PRIVATE_KEY)'
+    });
+  }
+  return res.json({ success: true, publicKey: getVapidPublicKey() });
+});
+
 // Recipe import endpoint
 app.post('/api/import', async (req, res) => {
   try {
@@ -144,6 +163,80 @@ function requireDb(req, res, next) {
       : 'Database not configured (set DATABASE_URL)'
   });
 }
+
+app.post('/api/push/subscribe', requireDb, async (req, res) => {
+  try {
+    if (!isPushConfigured()) {
+      return res.status(503).json({
+        success: false,
+        error: 'Web Push not configured (set VAPID_PUBLIC_KEY/VAPID_PRIVATE_KEY)'
+      });
+    }
+
+    const { clientId, subscription } = req.body || {};
+    const cid = String(clientId || '').trim();
+    if (!cid) return res.status(400).json({ success: false, error: 'clientId is required' });
+    if (!subscription || typeof subscription !== 'object') {
+      return res.status(400).json({ success: false, error: 'subscription is required' });
+    }
+
+    await upsertPushSubscription({ query, clientId: cid, subscription });
+    return res.json({ success: true });
+  } catch (error) {
+    console.error('Push subscribe error:', error);
+    return res.status(500).json({ success: false, error: 'Failed to save subscription' });
+  }
+});
+
+app.post('/api/push/schedule', requireDb, async (req, res) => {
+  try {
+    if (!isPushConfigured()) {
+      return res.status(503).json({
+        success: false,
+        error: 'Web Push not configured (set VAPID_PUBLIC_KEY/VAPID_PRIVATE_KEY)'
+      });
+    }
+
+    const { clientId, fireAtMs, payload } = req.body || {};
+    const cid = String(clientId || '').trim();
+    if (!cid) return res.status(400).json({ success: false, error: 'clientId is required' });
+
+    const fireAt = Number(fireAtMs);
+    if (!Number.isFinite(fireAt) || fireAt <= 0) {
+      return res.status(400).json({ success: false, error: 'fireAtMs must be a unix ms timestamp' });
+    }
+
+    if (!payload || typeof payload !== 'object') {
+      return res.status(400).json({ success: false, error: 'payload is required' });
+    }
+
+    // Don’t let clients schedule absurdly far in the future (keeps DB tidy).
+    const maxAheadMs = 7 * 24 * 60 * 60 * 1000; // 7 days
+    if (fireAt - Date.now() > maxAheadMs) {
+      return res.status(400).json({ success: false, error: 'fireAtMs too far in the future' });
+    }
+
+    const id = await schedulePushNotification({ query, clientId: cid, fireAtMs: fireAt, payload });
+    return res.json({ success: true, id });
+  } catch (error) {
+    console.error('Push schedule error:', error);
+    return res.status(500).json({ success: false, error: 'Failed to schedule push' });
+  }
+});
+
+app.post('/api/push/cancel', requireDb, async (req, res) => {
+  try {
+    const { id } = req.body || {};
+    const sid = String(id || '').trim();
+    if (!sid) return res.status(400).json({ success: false, error: 'id is required' });
+
+    await cancelScheduledPush({ query, id: sid });
+    return res.json({ success: true });
+  } catch (error) {
+    console.error('Push cancel error:', error);
+    return res.status(500).json({ success: false, error: 'Failed to cancel scheduled push' });
+  }
+});
 
 // Get all recipes
 app.get('/api/recipes', requireDb, async (req, res) => {
@@ -1420,6 +1513,13 @@ app.get('*', (req, res) => {
     await initDatabase();
     dbReady = true;
     console.log('✓ Database initialized');
+
+    try {
+      await initPushScheduler({ query });
+    } catch (error) {
+      console.warn('⚠ Push scheduler init failed');
+      console.error(error);
+    }
   } catch (error) {
     dbReady = false;
     console.warn('⚠ Database not ready - API will run in offline-only mode');

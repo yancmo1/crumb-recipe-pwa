@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ChevronDown, Edit3, Pause, Play, RotateCcw, Timer } from 'lucide-react';
 import { ensureNotificationPermission, showTimerNotification } from '../utils/notifications';
+import { cancelScheduledPush, schedulePush } from '../utils/push';
 import {
   extractDurationsFromInstruction,
   formatDurationClock,
@@ -109,14 +110,28 @@ export function FloatingStepTimer({
   const [isEditing, setIsEditing] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
 
+  // If we successfully schedule a server push, store the schedule id so we can cancel it.
+  const scheduledPushIdRef = useRef<string | null>(null);
+
   const { state, start, pause, reset } = useCountdownTimer(defaultSeconds, () => {
     onTimerComplete?.(defaultSeconds);
 
-    void showTimerNotification({
-      title: `Timer done • ${recipeTitle}`,
-      body: `Step ${stepIndex + 1}: ${formatDurationHuman(defaultSeconds)} finished\n${String(stepText).trim().slice(0, 120)}`,
-      tag: `crumb-floating-${stepIndex}`
-    });
+    // If we were able to schedule a Web Push, it will handle background/lock-screen delivery.
+    // Avoid double-notifying when the app stays in the foreground.
+    if (!scheduledPushIdRef.current) {
+      void showTimerNotification({
+        title: `Timer done • ${recipeTitle}`,
+        body: `Step ${stepIndex + 1}: ${formatDurationHuman(defaultSeconds)} finished\n${String(stepText).trim().slice(0, 120)}`,
+        tag: `crumb-floating-${stepIndex}`
+      });
+    } else {
+      // Best-effort: cancel any still-pending schedule (it may already have fired).
+      const id = scheduledPushIdRef.current;
+      scheduledPushIdRef.current = null;
+      void cancelScheduledPush(id).catch(() => {
+        // ignore
+      });
+    }
   });
 
   // If we switch steps while editing, close editor.
@@ -124,7 +139,29 @@ export function FloatingStepTimer({
     setIsEditing(false);
     // Keep the widget collapsed when advancing steps (less visual jumpiness).
     setIsExpanded(false);
+
+    // If the step changes, the timer's meaning changes too. Cancel any pending push.
+    const id = scheduledPushIdRef.current;
+    if (id) {
+      scheduledPushIdRef.current = null;
+      void cancelScheduledPush(id).catch(() => {
+        // ignore
+      });
+    }
   }, [stepIndex]);
+
+  // On unmount, cancel any pending schedule.
+  useEffect(() => {
+    return () => {
+      const id = scheduledPushIdRef.current;
+      if (id) {
+        scheduledPushIdRef.current = null;
+        void cancelScheduledPush(id).catch(() => {
+          // ignore
+        });
+      }
+    };
+  }, []);
 
   if (!enabled) return null;
 
@@ -194,6 +231,26 @@ export function FloatingStepTimer({
                       type="button"
                       onClick={async () => {
                         await ensureNotificationPermission();
+
+                        // Try to schedule a Web Push notification so it can fire while backgrounded/locked.
+                        // If this fails (unsupported or not configured), we fall back to in-app completion notification.
+                        try {
+                          const remaining = state.remainingSeconds > 0 ? state.remainingSeconds : defaultSeconds;
+                          const fireAtMs = Date.now() + remaining * 1000;
+                          const pushId = await schedulePush({
+                            fireAtMs,
+                            payload: {
+                              title: `Timer done • ${recipeTitle}`,
+                              body: `Step ${stepIndex + 1}: ${formatDurationHuman(remaining)} finished\n${String(stepText).trim().slice(0, 120)}`,
+                              tag: `crumb-floating-${stepIndex}`,
+                              url: typeof location !== 'undefined' ? location.href : '/'
+                            }
+                          });
+                          scheduledPushIdRef.current = pushId;
+                        } catch {
+                          scheduledPushIdRef.current = null;
+                        }
+
                         start();
                       }}
                       className="rounded-full p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100"
@@ -205,7 +262,16 @@ export function FloatingStepTimer({
                   ) : (
                     <button
                       type="button"
-                      onClick={pause}
+                      onClick={() => {
+                        const id = scheduledPushIdRef.current;
+                        if (id) {
+                          scheduledPushIdRef.current = null;
+                          void cancelScheduledPush(id).catch(() => {
+                            // ignore
+                          });
+                        }
+                        pause();
+                      }}
                       className="rounded-full p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100"
                       aria-label="Pause timer"
                       title="Pause"
@@ -216,7 +282,16 @@ export function FloatingStepTimer({
 
                   <button
                     type="button"
-                    onClick={reset}
+                    onClick={() => {
+                      const id = scheduledPushIdRef.current;
+                      if (id) {
+                        scheduledPushIdRef.current = null;
+                        void cancelScheduledPush(id).catch(() => {
+                          // ignore
+                        });
+                      }
+                      reset();
+                    }}
                     className="rounded-full p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100"
                     aria-label="Reset timer"
                     title="Reset"
