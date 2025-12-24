@@ -1,6 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ChevronDown, Edit3, Pause, Play, RotateCcw, Timer } from 'lucide-react';
 import { ensureNotificationPermission, showTimerNotification } from '../utils/notifications';
+import {
+  cancelNativeTimerNotification,
+  isNativePlatform,
+  NATIVE_TIMER_NOTIFICATION_ID,
+  scheduleNativeTimerNotification
+} from '../utils/nativeLocalNotifications';
+import { endTimerLiveActivity, startTimerLiveActivity } from '../utils/liveActivities';
 import { cancelScheduledPush, schedulePush } from '../utils/push';
 import { cancelServiceWorkerTimer, scheduleServiceWorkerTimer } from '../utils/serviceWorkerTimers';
 import {
@@ -112,15 +119,17 @@ export function FloatingStepTimer({
   const [isExpanded, setIsExpanded] = useState(false);
 
   // Track scheduled background notifications (server push or service worker timer)
+  const scheduledNativeIdRef = useRef<number | null>(null);
   const scheduledPushIdRef = useRef<string | null>(null);
   const scheduledSWTimerIdRef = useRef<string | null>(null);
+  const liveActivityIdRef = useRef<string | null>(null);
 
   const { state, start, pause, reset } = useCountdownTimer(defaultSeconds, () => {
     onTimerComplete?.(defaultSeconds);
 
     // If we scheduled a background notification, it may have already fired or will fire soon.
     // Show in-app notification only if no background notification was scheduled.
-    if (!scheduledPushIdRef.current && !scheduledSWTimerIdRef.current) {
+    if (!scheduledNativeIdRef.current && !scheduledPushIdRef.current && !scheduledSWTimerIdRef.current) {
       void showTimerNotification({
         title: `Timer done • ${recipeTitle}`,
         body: `Step ${stepIndex + 1}: ${formatDurationHuman(defaultSeconds)} finished\n${String(stepText).trim().slice(0, 120)}`,
@@ -128,6 +137,13 @@ export function FloatingStepTimer({
       });
     } else {
       // Best-effort: cancel any still-pending schedules (they may already have fired).
+      if (scheduledNativeIdRef.current) {
+        const id = scheduledNativeIdRef.current;
+        scheduledNativeIdRef.current = null;
+        void cancelNativeTimerNotification(id).catch(() => {
+          // ignore
+        });
+      }
       if (scheduledPushIdRef.current) {
         const id = scheduledPushIdRef.current;
         scheduledPushIdRef.current = null;
@@ -143,6 +159,15 @@ export function FloatingStepTimer({
         });
       }
     }
+
+    // Live Activity should be ended once the timer completes.
+    if (liveActivityIdRef.current) {
+      const id = liveActivityIdRef.current;
+      liveActivityIdRef.current = null;
+      void endTimerLiveActivity(id).catch(() => {
+        // ignore
+      });
+    }
   });
 
   // If we switch steps while editing, close editor.
@@ -152,8 +177,16 @@ export function FloatingStepTimer({
     setIsExpanded(false);
 
     // If the step changes, the timer's meaning changes too. Cancel any pending notifications.
+    const nativeId = scheduledNativeIdRef.current;
     const pushId = scheduledPushIdRef.current;
     const swTimerId = scheduledSWTimerIdRef.current;
+    const activityId = liveActivityIdRef.current;
+    if (nativeId) {
+      scheduledNativeIdRef.current = null;
+      void cancelNativeTimerNotification(nativeId).catch(() => {
+        // ignore
+      });
+    }
     if (pushId) {
       scheduledPushIdRef.current = null;
       void cancelScheduledPush(pushId).catch(() => {
@@ -166,13 +199,28 @@ export function FloatingStepTimer({
         // ignore
       });
     }
+
+    if (activityId) {
+      liveActivityIdRef.current = null;
+      void endTimerLiveActivity(activityId).catch(() => {
+        // ignore
+      });
+    }
   }, [stepIndex]);
 
   // On unmount, cancel any pending schedules.
   useEffect(() => {
     return () => {
+      const nativeId = scheduledNativeIdRef.current;
       const pushId = scheduledPushIdRef.current;
       const swTimerId = scheduledSWTimerIdRef.current;
+      const activityId = liveActivityIdRef.current;
+      if (nativeId) {
+        scheduledNativeIdRef.current = null;
+        void cancelNativeTimerNotification(nativeId).catch(() => {
+          // ignore
+        });
+      }
       if (pushId) {
         scheduledPushIdRef.current = null;
         void cancelScheduledPush(pushId).catch(() => {
@@ -182,6 +230,13 @@ export function FloatingStepTimer({
       if (swTimerId) {
         scheduledSWTimerIdRef.current = null;
         void cancelServiceWorkerTimer(swTimerId).catch(() => {
+          // ignore
+        });
+      }
+
+      if (activityId) {
+        liveActivityIdRef.current = null;
+        void endTimerLiveActivity(activityId).catch(() => {
           // ignore
         });
       }
@@ -255,8 +310,6 @@ export function FloatingStepTimer({
                     <button
                       type="button"
                       onClick={async () => {
-                        await ensureNotificationPermission();
-
                         const remaining = state.remainingSeconds > 0 ? state.remainingSeconds : defaultSeconds;
                         const fireAtMs = Date.now() + remaining * 1000;
                         const notificationPayload = {
@@ -266,23 +319,64 @@ export function FloatingStepTimer({
                           url: typeof location !== 'undefined' ? location.href : '/'
                         };
 
-                        // Try server-side Web Push first (reliable for long timers, works across device sleep)
-                        try {
-                          const pushId = await schedulePush({
-                            fireAtMs,
-                            payload: notificationPayload
-                          });
-                          scheduledPushIdRef.current = pushId;
-                        } catch {
-                          // Server push not available (no VAPID keys or server not configured).
-                          // Fall back to service worker timer (works for shorter timers, may not survive device sleep).
-                          scheduledPushIdRef.current = null;
+                        // Prefer native local notifications when running inside Capacitor.
+                        if (isNativePlatform()) {
                           try {
-                            const swTimerId = await scheduleServiceWorkerTimer(fireAtMs, notificationPayload);
-                            scheduledSWTimerIdRef.current = swTimerId;
-                          } catch {
+                            const id = await scheduleNativeTimerNotification({
+                              id: NATIVE_TIMER_NOTIFICATION_ID,
+                              fireAtMs,
+                              title: notificationPayload.title,
+                              body: notificationPayload.body
+                            });
+                            scheduledNativeIdRef.current = id;
+                            scheduledPushIdRef.current = null;
                             scheduledSWTimerIdRef.current = null;
-                            // Neither method available; in-app notification will still work if app stays open.
+                          } catch {
+                            scheduledNativeIdRef.current = null;
+                          }
+
+                          // Start a Live Activity (Dynamic Island) for iOS 16.2+ devices.
+                          try {
+                            if (liveActivityIdRef.current) {
+                              const prevId = liveActivityIdRef.current;
+                              liveActivityIdRef.current = null;
+                              await endTimerLiveActivity(prevId);
+                            }
+                            const activityId = await startTimerLiveActivity({
+                              recipeTitle,
+                              stepIndex,
+                              stepText,
+                              endTimeMs: fireAtMs,
+                              widgetUrl: typeof location !== 'undefined' ? location.href : 'crumb://timer'
+                            });
+                            liveActivityIdRef.current = activityId;
+                          } catch {
+                            liveActivityIdRef.current = null;
+                          }
+                        }
+
+                        // Web fallback: try server-side Web Push first.
+                        if (!scheduledNativeIdRef.current) {
+                          await ensureNotificationPermission();
+
+                          try {
+                            const pushId = await schedulePush({
+                              fireAtMs,
+                              payload: notificationPayload
+                            });
+                            scheduledPushIdRef.current = pushId;
+                            scheduledSWTimerIdRef.current = null;
+                          } catch {
+                            // Server push not available (no VAPID keys or server not configured).
+                            // Fall back to service worker timer (works for shorter timers, may not survive device sleep).
+                            scheduledPushIdRef.current = null;
+                            try {
+                              const swTimerId = await scheduleServiceWorkerTimer(fireAtMs, notificationPayload);
+                              scheduledSWTimerIdRef.current = swTimerId;
+                            } catch {
+                              scheduledSWTimerIdRef.current = null;
+                              // Neither method available; in-app notification will still work if app stays open.
+                            }
                           }
                         }
 
@@ -298,8 +392,16 @@ export function FloatingStepTimer({
                     <button
                       type="button"
                       onClick={() => {
+                        const nativeId = scheduledNativeIdRef.current;
                         const pushId = scheduledPushIdRef.current;
                         const swTimerId = scheduledSWTimerIdRef.current;
+                        const activityId = liveActivityIdRef.current;
+                        if (nativeId) {
+                          scheduledNativeIdRef.current = null;
+                          void cancelNativeTimerNotification(nativeId).catch(() => {
+                            // ignore
+                          });
+                        }
                         if (pushId) {
                           scheduledPushIdRef.current = null;
                           void cancelScheduledPush(pushId).catch(() => {
@@ -309,6 +411,13 @@ export function FloatingStepTimer({
                         if (swTimerId) {
                           scheduledSWTimerIdRef.current = null;
                           void cancelServiceWorkerTimer(swTimerId).catch(() => {
+                            // ignore
+                          });
+                        }
+
+                        if (activityId) {
+                          liveActivityIdRef.current = null;
+                          void endTimerLiveActivity(activityId).catch(() => {
                             // ignore
                           });
                         }
@@ -325,8 +434,16 @@ export function FloatingStepTimer({
                   <button
                     type="button"
                     onClick={() => {
+                      const nativeId = scheduledNativeIdRef.current;
                       const pushId = scheduledPushIdRef.current;
                       const swTimerId = scheduledSWTimerIdRef.current;
+                      const activityId = liveActivityIdRef.current;
+                      if (nativeId) {
+                        scheduledNativeIdRef.current = null;
+                        void cancelNativeTimerNotification(nativeId).catch(() => {
+                          // ignore
+                        });
+                      }
                       if (pushId) {
                         scheduledPushIdRef.current = null;
                         void cancelScheduledPush(pushId).catch(() => {
@@ -336,6 +453,13 @@ export function FloatingStepTimer({
                       if (swTimerId) {
                         scheduledSWTimerIdRef.current = null;
                         void cancelServiceWorkerTimer(swTimerId).catch(() => {
+                          // ignore
+                        });
+                      }
+
+                      if (activityId) {
+                        liveActivityIdRef.current = null;
+                        void endTimerLiveActivity(activityId).catch(() => {
                           // ignore
                         });
                       }
