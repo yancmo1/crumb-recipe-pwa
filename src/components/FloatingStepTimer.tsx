@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { ChevronDown, Edit3, Pause, Play, RotateCcw, Timer } from 'lucide-react';
 import { ensureNotificationPermission, showTimerNotification } from '../utils/notifications';
 import { cancelScheduledPush, schedulePush } from '../utils/push';
+import { cancelServiceWorkerTimer, scheduleServiceWorkerTimer } from '../utils/serviceWorkerTimers';
 import {
   extractDurationsFromInstruction,
   formatDurationClock,
@@ -110,27 +111,37 @@ export function FloatingStepTimer({
   const [isEditing, setIsEditing] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
 
-  // If we successfully schedule a server push, store the schedule id so we can cancel it.
+  // Track scheduled background notifications (server push or service worker timer)
   const scheduledPushIdRef = useRef<string | null>(null);
+  const scheduledSWTimerIdRef = useRef<string | null>(null);
 
   const { state, start, pause, reset } = useCountdownTimer(defaultSeconds, () => {
     onTimerComplete?.(defaultSeconds);
 
-    // If we were able to schedule a Web Push, it will handle background/lock-screen delivery.
-    // Avoid double-notifying when the app stays in the foreground.
-    if (!scheduledPushIdRef.current) {
+    // If we scheduled a background notification, it may have already fired or will fire soon.
+    // Show in-app notification only if no background notification was scheduled.
+    if (!scheduledPushIdRef.current && !scheduledSWTimerIdRef.current) {
       void showTimerNotification({
         title: `Timer done • ${recipeTitle}`,
         body: `Step ${stepIndex + 1}: ${formatDurationHuman(defaultSeconds)} finished\n${String(stepText).trim().slice(0, 120)}`,
         tag: `crumb-floating-${stepIndex}`
       });
     } else {
-      // Best-effort: cancel any still-pending schedule (it may already have fired).
-      const id = scheduledPushIdRef.current;
-      scheduledPushIdRef.current = null;
-      void cancelScheduledPush(id).catch(() => {
-        // ignore
-      });
+      // Best-effort: cancel any still-pending schedules (they may already have fired).
+      if (scheduledPushIdRef.current) {
+        const id = scheduledPushIdRef.current;
+        scheduledPushIdRef.current = null;
+        void cancelScheduledPush(id).catch(() => {
+          // ignore
+        });
+      }
+      if (scheduledSWTimerIdRef.current) {
+        const id = scheduledSWTimerIdRef.current;
+        scheduledSWTimerIdRef.current = null;
+        void cancelServiceWorkerTimer(id).catch(() => {
+          // ignore
+        });
+      }
     }
   });
 
@@ -140,23 +151,37 @@ export function FloatingStepTimer({
     // Keep the widget collapsed when advancing steps (less visual jumpiness).
     setIsExpanded(false);
 
-    // If the step changes, the timer's meaning changes too. Cancel any pending push.
-    const id = scheduledPushIdRef.current;
-    if (id) {
+    // If the step changes, the timer's meaning changes too. Cancel any pending notifications.
+    const pushId = scheduledPushIdRef.current;
+    const swTimerId = scheduledSWTimerIdRef.current;
+    if (pushId) {
       scheduledPushIdRef.current = null;
-      void cancelScheduledPush(id).catch(() => {
+      void cancelScheduledPush(pushId).catch(() => {
+        // ignore
+      });
+    }
+    if (swTimerId) {
+      scheduledSWTimerIdRef.current = null;
+      void cancelServiceWorkerTimer(swTimerId).catch(() => {
         // ignore
       });
     }
   }, [stepIndex]);
 
-  // On unmount, cancel any pending schedule.
+  // On unmount, cancel any pending schedules.
   useEffect(() => {
     return () => {
-      const id = scheduledPushIdRef.current;
-      if (id) {
+      const pushId = scheduledPushIdRef.current;
+      const swTimerId = scheduledSWTimerIdRef.current;
+      if (pushId) {
         scheduledPushIdRef.current = null;
-        void cancelScheduledPush(id).catch(() => {
+        void cancelScheduledPush(pushId).catch(() => {
+          // ignore
+        });
+      }
+      if (swTimerId) {
+        scheduledSWTimerIdRef.current = null;
+        void cancelServiceWorkerTimer(swTimerId).catch(() => {
           // ignore
         });
       }
@@ -232,23 +257,33 @@ export function FloatingStepTimer({
                       onClick={async () => {
                         await ensureNotificationPermission();
 
-                        // Try to schedule a Web Push notification so it can fire while backgrounded/locked.
-                        // If this fails (unsupported or not configured), we fall back to in-app completion notification.
+                        const remaining = state.remainingSeconds > 0 ? state.remainingSeconds : defaultSeconds;
+                        const fireAtMs = Date.now() + remaining * 1000;
+                        const notificationPayload = {
+                          title: `Timer done • ${recipeTitle}`,
+                          body: `Step ${stepIndex + 1}: ${formatDurationHuman(remaining)} finished\n${String(stepText).trim().slice(0, 120)}`,
+                          tag: `crumb-floating-${stepIndex}`,
+                          url: typeof location !== 'undefined' ? location.href : '/'
+                        };
+
+                        // Try server-side Web Push first (reliable for long timers, works across device sleep)
                         try {
-                          const remaining = state.remainingSeconds > 0 ? state.remainingSeconds : defaultSeconds;
-                          const fireAtMs = Date.now() + remaining * 1000;
                           const pushId = await schedulePush({
                             fireAtMs,
-                            payload: {
-                              title: `Timer done • ${recipeTitle}`,
-                              body: `Step ${stepIndex + 1}: ${formatDurationHuman(remaining)} finished\n${String(stepText).trim().slice(0, 120)}`,
-                              tag: `crumb-floating-${stepIndex}`,
-                              url: typeof location !== 'undefined' ? location.href : '/'
-                            }
+                            payload: notificationPayload
                           });
                           scheduledPushIdRef.current = pushId;
                         } catch {
+                          // Server push not available (no VAPID keys or server not configured).
+                          // Fall back to service worker timer (works for shorter timers, may not survive device sleep).
                           scheduledPushIdRef.current = null;
+                          try {
+                            const swTimerId = await scheduleServiceWorkerTimer(fireAtMs, notificationPayload);
+                            scheduledSWTimerIdRef.current = swTimerId;
+                          } catch {
+                            scheduledSWTimerIdRef.current = null;
+                            // Neither method available; in-app notification will still work if app stays open.
+                          }
                         }
 
                         start();
@@ -263,10 +298,17 @@ export function FloatingStepTimer({
                     <button
                       type="button"
                       onClick={() => {
-                        const id = scheduledPushIdRef.current;
-                        if (id) {
+                        const pushId = scheduledPushIdRef.current;
+                        const swTimerId = scheduledSWTimerIdRef.current;
+                        if (pushId) {
                           scheduledPushIdRef.current = null;
-                          void cancelScheduledPush(id).catch(() => {
+                          void cancelScheduledPush(pushId).catch(() => {
+                            // ignore
+                          });
+                        }
+                        if (swTimerId) {
+                          scheduledSWTimerIdRef.current = null;
+                          void cancelServiceWorkerTimer(swTimerId).catch(() => {
                             // ignore
                           });
                         }
@@ -283,10 +325,17 @@ export function FloatingStepTimer({
                   <button
                     type="button"
                     onClick={() => {
-                      const id = scheduledPushIdRef.current;
-                      if (id) {
+                      const pushId = scheduledPushIdRef.current;
+                      const swTimerId = scheduledSWTimerIdRef.current;
+                      if (pushId) {
                         scheduledPushIdRef.current = null;
-                        void cancelScheduledPush(id).catch(() => {
+                        void cancelScheduledPush(pushId).catch(() => {
+                          // ignore
+                        });
+                      }
+                      if (swTimerId) {
+                        scheduledSWTimerIdRef.current = null;
+                        void cancelServiceWorkerTimer(swTimerId).catch(() => {
                           // ignore
                         });
                       }
