@@ -113,6 +113,75 @@ self.addEventListener('notificationclick', (event) => {
   );
 });
 
+// Client-side timer storage for background notifications
+// (fallback when server-side push isn't configured or available)
+const activeTimers = new Map<string, NodeJS.Timeout>();
+
+type TimerMessage = {
+  type: 'schedule-timer';
+  id: string;
+  fireAtMs: number;
+  notification: {
+    title: string;
+    body?: string;
+    tag?: string;
+    url?: string;
+  };
+};
+
+type CancelTimerMessage = {
+  type: 'cancel-timer';
+  id: string;
+};
+
+// Handle messages from the client to schedule/cancel timers
+self.addEventListener('message', (event) => {
+  const msg = event.data as TimerMessage | CancelTimerMessage;
+
+  if (msg.type === 'schedule-timer') {
+    // Cancel any existing timer with this ID
+    const existing = activeTimers.get(msg.id);
+    if (existing) {
+      clearTimeout(existing);
+      activeTimers.delete(msg.id);
+    }
+
+    const delay = Math.max(0, msg.fireAtMs - Date.now());
+    
+    // Service workers can be terminated, so this isn't 100% reliable for very long timers,
+    // but it works well for cooking timers (typically minutes, not hours).
+    // For production, you'd want to combine this with server-side push or periodic background sync.
+    const timer = setTimeout(() => {
+      activeTimers.delete(msg.id);
+      
+      const title = msg.notification.title || 'Timer done';
+      const icon = '/pwa-192x192.png';
+      
+      const options: NotificationOptions & { [key: string]: unknown } = {
+        body: msg.notification.body,
+        tag: msg.notification.tag || msg.id,
+        icon,
+        badge: icon,
+        requireInteraction: true,
+        vibrate: [200, 100, 200],
+        data: {
+          url: msg.notification.url || '/'
+        }
+      };
+
+      self.registration.showNotification(title, options);
+    }, delay);
+
+    activeTimers.set(msg.id, timer);
+  } else if (msg.type === 'cancel-timer') {
+    const existing = activeTimers.get(msg.id);
+    if (existing) {
+      clearTimeout(existing);
+      activeTimers.delete(msg.id);
+    }
+  }
+});
+
 // Offline fallback: if a navigation fails, serve the app shell when possible.
 setCatchHandler(async ({ event }) => {
   const maybeFetchEvent = event as unknown as FetchEvent;
