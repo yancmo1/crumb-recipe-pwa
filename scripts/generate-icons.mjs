@@ -4,7 +4,18 @@ import sharp from 'sharp';
 
 const root = process.cwd();
 const publicDir = path.join(root, 'public');
-const srcSvgPath = path.join(publicDir, 'icon.svg');
+const defaultSrcPngPath = path.join(publicDir, 'icon-source.png');
+const defaultSrcSvgPath = path.join(publicDir, 'icon.svg');
+
+const iosAppIconPath = path.join(
+  root,
+  'ios',
+  'App',
+  'App',
+  'Assets.xcassets',
+  'AppIcon.appiconset',
+  'AppIcon-512@2x.png'
+);
 
 async function ensureExists(p) {
   try {
@@ -14,16 +25,44 @@ async function ensureExists(p) {
   }
 }
 
-async function renderPng({ outPath, size }) {
-  const svg = await fs.readFile(srcSvgPath);
-  await sharp(svg, { density: 256 })
-    .resize(size, size)
-    .png({ compressionLevel: 9 })
-    .toFile(outPath);
+function getArgValue(flag) {
+  const idx = process.argv.indexOf(flag);
+  if (idx === -1) return null;
+  const v = process.argv[idx + 1];
+  if (!v || v.startsWith('-')) return null;
+  return v;
+}
+
+async function fileExists(p) {
+  try {
+    await fs.access(p);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function resolveSourcePath() {
+  const cli = getArgValue('--input') || getArgValue('-i');
+  if (cli) return path.isAbsolute(cli) ? cli : path.join(root, cli);
+
+  if (await fileExists(defaultSrcPngPath)) return defaultSrcPngPath;
+  return defaultSrcSvgPath;
+}
+
+async function renderPng({ srcPath, outPath, size }) {
+  const ext = path.extname(srcPath).toLowerCase();
+  const input = await fs.readFile(srcPath);
+
+  // If the source is SVG, bump density to avoid soft results.
+  const img = ext === '.svg' ? sharp(input, { density: 256 }) : sharp(input);
+
+  await img.resize(size, size).png({ compressionLevel: 9 }).toFile(outPath);
 }
 
 async function run() {
-  await ensureExists(srcSvgPath);
+  const srcPath = await resolveSourcePath();
+  await ensureExists(srcPath);
 
   const outputs = [
     // PWA manifest icons
@@ -41,7 +80,17 @@ async function run() {
     const outPath = path.join(publicDir, o.file);
     // eslint-disable-next-line no-console
     console.log(`Generating ${o.file} (${o.size}x${o.size})`);
-    await renderPng({ outPath, size: o.size });
+    await renderPng({ srcPath, outPath, size: o.size });
+  }
+
+  // iOS App Icon (single 1024x1024 file referenced by the asset catalog).
+  if (await fileExists(path.dirname(iosAppIconPath))) {
+    // eslint-disable-next-line no-console
+    console.log('Generating iOS AppIcon (1024x1024)');
+    await renderPng({ srcPath, outPath: iosAppIconPath, size: 1024 });
+  } else {
+    // eslint-disable-next-line no-console
+    console.log('Skipping iOS AppIcon (iOS project not found)');
   }
 
   // eslint-disable-next-line no-console

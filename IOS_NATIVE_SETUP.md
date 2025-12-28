@@ -39,19 +39,22 @@ If you see **“Signing for 'App' requires a development team”**, it means Xco
 
 ## Live Activities / Dynamic Island status
 
-We *temporarily removed* the third-party `capacitor-live-activities` plugin.
+Live Activities / Dynamic Island support is implemented using **ActivityKit + WidgetKit**:
 
-Reason: it currently depends on Capacitor 7’s iOS SPM package (`capacitor-swift-pm` 7.x), while this app uses Capacitor 8 (`capacitor-swift-pm` 8.x). Mixing those breaks Swift Package resolution in Xcode and surfaces as:
+- Native bridge: `ios/App/App/LiveActivitiesPlugin.swift`
+- Widget extension: `ios/App/TimerLiveActivityExtension/*`
+- JS wrapper: `src/utils/liveActivities.ts`
+- Manual test harness: in the iOS app, open **Settings → Live Activities** and tap **Start test Live Activity** (see `QUICK_START.md`).
 
-- “Missing package product `CapApp-SPM`”
+### If Xcode shows SwiftPM “missing xcframework zip” errors
 
-The JS helpers in `src/utils/liveActivities.ts` are currently a no-op so the iOS build is unblocked and native **local notifications** can work reliably.
+Occasionally Xcode’s SwiftPM artifact cache can get into a bad state and you may see errors like:
 
-### Next step (when we want the “cool”)
+- `.../SourcePackages/artifacts/capacitor-swift-pm/Cordova/Cordova.xcframework.zip` (file not found)
+- `.../SourcePackages/artifacts/capacitor-swift-pm/Capacitor/Capacitor.xcframework.zip` (file not found)
 
-Implement Live Activities the “Apple way”:
+Fix:
 
-- Add an **ActivityKit** widget extension target in Xcode
-- Add required entitlements (Live Activities, App Groups if needed)
-- Add a small native bridge (Capacitor plugin or direct native code) that can start/update/end the activity
+- Run `npm run ios:spm:repair` (deletes this project’s Xcode DerivedData so SwiftPM can re-fetch artifacts)
+- Re-open Xcode and build again
 

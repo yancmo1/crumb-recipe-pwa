@@ -25,47 +25,18 @@
       "problemMatcher": []
     },
     {
-<<<<<<< HEAD
       "label": "Dev: Backend (Express)",
       "type": "shell",
       "command": "npm run server",
       "isBackground": true,
-      "problemMatcher": {
-        "owner": "crumb-dev",
-        "pattern": [{
-          "regexp": ".*"
-        }],
-        "background": {
-          "activeOnStart": true,
-          "beginsPattern": ".*",
-          "endsPattern": "Recipe import server running on port"
-        }
-      },
-      "presentation": {
-        "reveal": "always",
-        "panel": "dedicated"
-      }
+      "problemMatcher": []
     },
     {
       "label": "Dev: Frontend (Vite)",
       "type": "shell",
       "command": "npm run dev",
       "isBackground": true,
-      "problemMatcher": {
-        "owner": "crumb-dev",
-        "pattern": [{
-          "regexp": ".*"
-        }],
-        "background": {
-          "activeOnStart": true,
-          "beginsPattern": ".*",
-          "endsPattern": "Local:\\s+http"
-        }
-      },
-      "presentation": {
-        "reveal": "always",
-        "panel": "dedicated"
-      }
+      "problemMatcher": []
     },
     {
       "label": "Dev: Full stack (Vite + API)",
@@ -79,17 +50,12 @@
       "problemMatcher": []
     },
     {
-      "label": "Test: Dev server smoke",
-      "type": "shell",
-      "command": "node scripts/dev-smoke.mjs",
-      "dependsOn": [
-        "Dev: Full stack (Vite + API)"
-      ],
-      "problemMatcher": []
-=======
       "label": "Server: Update + Restart crumb (infra-new)",
       "type": "shell",
       "command": "ssh -t yancmo@100.105.31.42 'set -euo pipefail; echo \"Updating crumb (pull + recreate)\"; sudo docker compose -p infra-new -f /opt/infra-new/compose/docker-compose.yml pull crumb; sudo docker compose -p infra-new -f /opt/infra-new/compose/docker-compose.yml up -d --force-recreate crumb; echo; echo \"--- docker compose ps crumb\"; sudo docker compose -p infra-new -f /opt/infra-new/compose/docker-compose.yml ps crumb; echo; echo \"--- last 80 lines crumb logs\"; sudo docker logs --tail 80 infra-new-crumb-1 2>/dev/null || true'",
+      "dependsOn": [
+        "Dev: Full stack (Vite + API)"
+      ],
       "problemMatcher": [],
       "group": {
         "kind": "build",
@@ -134,7 +100,71 @@
         "Dev: Start Backend (hot reload)",
         "Dev: Start Frontend (Vite)"
       ]
->>>>>>> New-improvements-from-gpt5.2-suggestions
+    },
+    {
+      "label": "iOS: Monitor SwiftPM artifacts",
+      "type": "shell",
+      "command": "set -euo pipefail; cd /Users/yancyshepherd/Projects/crumb-recipe-pwa; echo 'Monitoring Xcode SwiftPM artifacts (Ctrl+C to stop)'; while true; do echo; date; node scripts/ios-spm-status.mjs || true; sleep 10; done",
+      "isBackground": true,
+      "problemMatcher": []
+    },
+    {
+      "label": "iOS: Repair SwiftPM + Build (sim)",
+      "type": "shell",
+      "command": "set -euo pipefail; cd /Users/yancyshepherd/Projects/crumb-recipe-pwa; npm run ios:spm:repair; xcodebuild -project ios/App/App.xcodeproj -scheme App -resolvePackageDependencies; xcodebuild -project ios/App/App.xcodeproj -scheme App -configuration Debug -destination 'platform=iOS Simulator,name=iPhone 14 Pro,OS=16.4' build",
+      "problemMatcher": []
+    },
+    {
+      "label": "Fastlane: Bundle Install",
+      "type": "shell",
+      "command": "set -euo pipefail; cd /Users/yancyshepherd/Projects/crumb-recipe-pwa; bundle install",
+      "problemMatcher": [],
+      "group": {
+        "kind": "build",
+        "isDefault": false
+      }
+    },
+    {
+      "label": "🧪 Fastlane: Tests",
+      "type": "shell",
+      "command": "set -euo pipefail; cd /Users/yancyshepherd/Projects/crumb-recipe-pwa; if command -v direnv >/dev/null 2>&1; then eval \"$(direnv export zsh)\"; fi; bundle exec fastlane tests",
+      "problemMatcher": [],
+      "group": {
+        "kind": "test",
+        "isDefault": false
+      }
+    },
+    {
+      "label": "📦 Fastlane: Beta Upload",
+      "type": "shell",
+      "command": "set -euo pipefail; cd /Users/yancyshepherd/Projects/crumb-recipe-pwa; if command -v direnv >/dev/null 2>&1; then eval \"$(direnv export zsh)\"; fi; bundle exec fastlane beta",
+      "problemMatcher": [],
+      "group": {
+        "kind": "build",
+        "isDefault": false
+      }
+    },
+    {
+      "label": "📦 Fastlane: Beta Upload (Wait)",
+      "type": "shell",
+      "command": "set -euo pipefail; cd /Users/yancyshepherd/Projects/crumb-recipe-pwa; if command -v direnv >/dev/null 2>&1; then eval \"$(direnv export zsh)\"; fi; WAIT_FOR_PROCESSING=1 bundle exec fastlane beta --verbose",
+      "problemMatcher": [],
+      "group": {
+        "kind": "build",
+        "isDefault": false
+      }
+    },
+    {
+      "label": "📊 Fastlane: TestFlight Status",
+      "type": "shell",
+      "command": "set -euo pipefail; cd /Users/yancyshepherd/Projects/crumb-recipe-pwa; if command -v direnv >/dev/null 2>&1; then eval \"$(direnv export zsh)\"; fi; bundle exec fastlane tf_status",
+      "problemMatcher": []
+    },
+    {
+      "label": "📊 Fastlane: List All TestFlight Builds",
+      "type": "shell",
+      "command": "set -euo pipefail; cd /Users/yancyshepherd/Projects/crumb-recipe-pwa; if command -v direnv >/dev/null 2>&1; then eval \"$(direnv export zsh)\"; fi; bundle exec fastlane tf_list_all",
+      "problemMatcher": []
     }
   ]
 }

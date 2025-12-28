@@ -1,0 +1,5 @@
+app_identifier("com.yancmo.crumb")
+team_id("9PHS626XUN")
+
+# Optional (Apple ID auth fallback). Prefer ASC_* API key auth via .envrc/.env.
+# apple_id(ENV["FASTLANE_USER"]) if ENV["FASTLANE_USER"]

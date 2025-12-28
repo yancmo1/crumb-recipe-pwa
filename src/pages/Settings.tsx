@@ -5,6 +5,8 @@ import { toast } from 'sonner';
 import { useSettings, useRecipeStore } from '../state/session';
 import { db } from '../db';
 import { IosNavBar } from '../components/IosNavBar';
+import { endTimerLiveActivity, startTimerLiveActivity } from '../utils/liveActivities';
+import { isNativePlatform } from '../utils/nativeLocalNotifications';
 
 export default function Settings() {
   const navigate = useNavigate();
@@ -27,6 +29,8 @@ export default function Settings() {
   const [isExporting, setIsExporting] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
   const [isClearingData, setIsClearingData] = useState(false);
+  const [isTestingLiveActivity, setIsTestingLiveActivity] = useState(false);
+  const [testLiveActivityId, setTestLiveActivityId] = useState<string | null>(null);
 
   const [overrideIngredientKey, setOverrideIngredientKey] = useState('');
   const [overrideUnit, setOverrideUnit] = useState('');
@@ -142,6 +146,86 @@ export default function Settings() {
       />
 
       <div className="max-w-md md:max-w-3xl lg:max-w-5xl mx-auto px-4 py-5 space-y-5">
+        {/* Live Activities (iOS) */}
+        {isNativePlatform() && (
+          <div className="ios-card p-5">
+            <h2 className="text-lg font-semibold text-gray-900 mb-2">Live Activities</h2>
+            <p className="text-sm text-gray-500 mb-4">
+              Use this to verify the Lock Screen + Dynamic Island timer UI.
+              If nothing shows, check iOS Settings → <span className="font-semibold">Crumb</span> → <span className="font-semibold">Live Activities</span>.
+            </p>
+
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                disabled={isTestingLiveActivity}
+                onClick={async () => {
+                  setIsTestingLiveActivity(true);
+                  try {
+                    if (testLiveActivityId) {
+                      await endTimerLiveActivity(testLiveActivityId);
+                      setTestLiveActivityId(null);
+                    }
+
+                    const endAt = Date.now() + 5 * 60 * 1000; // 5 minutes
+                    const activityId = await startTimerLiveActivity({
+                      recipeTitle: 'Live Activity Test',
+                      stepIndex: 0,
+                      stepText: 'If you see this in the Dynamic Island, we’re cooking.',
+                      endTimeMs: endAt,
+                      widgetUrl: 'crumb://timer?test=1'
+                    });
+
+                    setTestLiveActivityId(activityId);
+
+                    if (activityId) {
+                      toast.success('Live Activity started');
+                    } else {
+                      toast.error('Live Activity not started (not supported or disabled)');
+                    }
+                  } catch (e) {
+                    console.error('Live Activity test failed:', e);
+                    toast.error('Failed to start Live Activity');
+                  } finally {
+                    setIsTestingLiveActivity(false);
+                  }
+                }}
+                className="px-4 py-2 bg-blueberry text-white rounded-lg hover:bg-blueberry/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                Start test Live Activity
+              </button>
+
+              <button
+                type="button"
+                disabled={!testLiveActivityId || isTestingLiveActivity}
+                onClick={async () => {
+                  if (!testLiveActivityId) return;
+                  setIsTestingLiveActivity(true);
+                  try {
+                    await endTimerLiveActivity(testLiveActivityId);
+                    setTestLiveActivityId(null);
+                    toast.success('Live Activity ended');
+                  } catch (e) {
+                    console.error('End Live Activity failed:', e);
+                    toast.error('Failed to end Live Activity');
+                  } finally {
+                    setIsTestingLiveActivity(false);
+                  }
+                }}
+                className="px-4 py-2 bg-gray-100 text-gray-800 rounded-lg hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                End test Live Activity
+              </button>
+            </div>
+
+            {testLiveActivityId && (
+              <p className="mt-3 text-xs text-gray-500">
+                Current activity id: <span className="font-mono">{testLiveActivityId}</span>
+              </p>
+            )}
+          </div>
+        )}
+
         {/* Theme Settings */}
         <div className="ios-card p-5">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">Appearance</h2>

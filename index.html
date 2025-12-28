@@ -2,6 +2,69 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
+
+    <meta name="crumb-asset-version" content="%VITE_ASSET_VERSION%" />
+
+    <script>
+      // Capture errors that happen before the module bundle loads.
+      // This helps diagnose Capacitor "⚡️ JS Eval error" messages that may occur very early.
+      (function () {
+        try {
+          window.__CRUMB_BOOT_TS__ = Date.now();
+          console.log('[pre-main] boot', {
+            assetVersion: '%VITE_ASSET_VERSION%',
+            href: String(window.location && window.location.href),
+            userAgent: String(navigator && navigator.userAgent),
+          });
+
+          window.addEventListener(
+            'error',
+            function (event) {
+              try {
+                var err = event && event.error;
+                console.error('[pre-main][window.error]', {
+                  message: (event && event.message) || (err && err.message) || String(event),
+                  filename: event && event.filename,
+                  lineno: event && event.lineno,
+                  colno: event && event.colno,
+                  stack: err && err.stack,
+                  href: String(window.location && window.location.href),
+                  readyState: document && document.readyState,
+                  sinceBootMs: Date.now() - window.__CRUMB_BOOT_TS__,
+                });
+              } catch (inner) {
+                console.error('[pre-main][window.error] (failed to serialize)', inner);
+              }
+            },
+            true
+          );
+
+          window.addEventListener(
+            'unhandledrejection',
+            function (event) {
+              try {
+                var reason = event && event.reason;
+                console.error('[pre-main][unhandledrejection]', {
+                  reason:
+                    reason && typeof reason === 'object'
+                      ? { message: reason.message, name: reason.name, stack: reason.stack }
+                      : reason,
+                  href: String(window.location && window.location.href),
+                  readyState: document && document.readyState,
+                  sinceBootMs: Date.now() - window.__CRUMB_BOOT_TS__,
+                });
+              } catch (inner) {
+                console.error('[pre-main][unhandledrejection] (failed to serialize)', inner);
+              }
+            },
+            true
+          );
+        } catch (e) {
+          // Avoid blocking the app if logging setup fails.
+          console.error('[pre-main] failed to install global error handlers', e);
+        }
+      })();
+    </script>
     
     <!-- Viewport + safe areas (needed for iOS notch/Dynamic Island) -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
@@ -19,11 +82,10 @@
     <meta name="apple-mobile-web-app-title" content="Crumb" />
     
     <!-- Apple Touch Icons -->
-    <!-- Cache-bust icons across deploys (iOS caches aggressively). -->
-    <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=%VITE_ASSET_VERSION%" />
-    <link rel="apple-touch-icon" sizes="152x152" href="/apple-touch-icon-152x152.png?v=%VITE_ASSET_VERSION%" />
-    <link rel="apple-touch-icon" sizes="167x167" href="/apple-touch-icon-167x167.png?v=%VITE_ASSET_VERSION%" />
-    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon-180x180.png?v=%VITE_ASSET_VERSION%" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="apple-touch-icon" sizes="152x152" href="/apple-touch-icon-152x152.png" />
+    <link rel="apple-touch-icon" sizes="167x167" href="/apple-touch-icon-167x167.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon-180x180.png" />
     
     <!-- Standard favicon -->
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />

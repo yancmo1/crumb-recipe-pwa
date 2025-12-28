@@ -30,6 +30,24 @@ pnpm-debug.log*
 !.env.example
 !.env.template
 
+# direnv (keep example)
+.envrc
+!.envrc.example
+
+# Bundler
+/.bundle/*
+!/.bundle/config
+vendor/bundle/
+
+# Fastlane outputs
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots/
+fastlane/test_output/
+fastlane/build/
+*.ipa
+*.dSYM.zip
+
 # OS / editor
 .DS_Store
 .AppleDouble

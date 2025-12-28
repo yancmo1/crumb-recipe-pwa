@@ -7,12 +7,13 @@ import ImportRecipe from './pages/ImportRecipe';
 import RecipeDetail from './pages/RecipeDetail';
 import Settings from './pages/Settings';
 import { registerSW } from 'virtual:pwa-register';
+import { isNativePlatform } from './utils/nativeLocalNotifications';
 
 // Register service worker
 let updateSW: ((reloadPage?: boolean) => Promise<void>) | undefined;
 let updateToastShown = false;
 
-if ('serviceWorker' in navigator) {
+if ('serviceWorker' in navigator && !isNativePlatform()) {
   updateSW = registerSW({
     onNeedRefresh() {
       // Common practice: inform the user and let them choose when to reload.

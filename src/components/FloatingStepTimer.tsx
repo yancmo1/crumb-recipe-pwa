@@ -87,12 +87,15 @@ function useCountdownTimer(initialSeconds: number, onComplete?: () => void) {
 
 export function FloatingStepTimer({
   recipeTitle,
+  recipeImageUrl,
   stepIndex,
   stepText,
   enabled,
   onTimerComplete
 }: {
   recipeTitle: string;
+  /** Optional recipe image URL (ideally https://...) used for Live Activities thumbnail */
+  recipeImageUrl?: string;
   /** 0-based index into recipe.steps */
   stepIndex: number;
   stepText: string;
@@ -335,7 +338,7 @@ export function FloatingStepTimer({
                             scheduledNativeIdRef.current = null;
                           }
 
-                          // Start a Live Activity (Dynamic Island) for iOS 16.2+ devices.
+                          // Start a Live Activity (Dynamic Island) for iOS 16.1+ devices.
                           try {
                             if (liveActivityIdRef.current) {
                               const prevId = liveActivityIdRef.current;
@@ -347,7 +350,8 @@ export function FloatingStepTimer({
                               stepIndex,
                               stepText,
                               endTimeMs: fireAtMs,
-                              widgetUrl: typeof location !== 'undefined' ? location.href : 'crumb://timer'
+                              widgetUrl: `crumb://timer?step=${stepIndex + 1}`,
+                              imageUrl: recipeImageUrl
                             });
                             liveActivityIdRef.current = activityId;
                           } catch {

@@ -1,0 +1,3 @@
+---
+# Keep gems local to the repo so `bundle exec fastlane` is reproducible
+BUNDLE_PATH: "vendor/bundle"

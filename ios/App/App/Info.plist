@@ -86,5 +86,16 @@
 	</dict>
 	<key>NSSupportsLiveActivities</key>
 	<true/>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>com.yancmo.crumb</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>crumb</string>
+			</array>
+		</dict>
+	</array>
 </dict>
 </plist>

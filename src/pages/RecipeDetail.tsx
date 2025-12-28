@@ -722,6 +722,7 @@ export default function RecipeDetail() {
 
         <FloatingStepTimer
           recipeTitle={recipe.title}
+          recipeImageUrl={recipe.image}
           stepIndex={currentStepIndex}
           stepText={recipe.steps[currentStepIndex] || ''}
           enabled={!!currentSession}

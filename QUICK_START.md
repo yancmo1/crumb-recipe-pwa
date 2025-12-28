@@ -43,6 +43,37 @@ docker-compose up
 # Then import a recipe from the UI
 ```
 
+## 🎨 App icon (PWA + iOS)
+
+The icon pipeline is driven by a single source image:
+
+- Preferred: `public/icon-source.png` (recommended for raster artwork)
+- Fallback: `public/icon.svg` (existing vector icon)
+
+After updating the source icon, regenerate all derived assets:
+
+```bash
+npm run icons
+```
+
+This updates:
+
+- PWA icons in `public/` (e.g. `pwa-192x192.png`, `pwa-512x512.png`, Apple touch icons)
+- iOS app icon at `ios/App/App/Assets.xcassets/AppIcon.appiconset/AppIcon-512@2x.png`
+
+## 🟣 Live Activities / Dynamic Island (iOS)
+
+- Requires iOS 16.1+.
+- Dynamic Island UI requires a Dynamic Island device (e.g. iPhone 14 Pro / 15 Pro / 16 Pro).
+- In the iOS app, open **Settings → Live Activities** and tap **Start test Live Activity**.
+- If nothing appears:
+  - Check iOS **Settings → Crumb → Live Activities** is enabled.
+  - Lock the device to see the Live Activity on the Lock Screen.
+
+If Xcode refuses to build with SwiftPM errors like missing `Capacitor.xcframework.zip` / `Cordova.xcframework.zip`, run:
+
+- `npm run ios:spm:repair`
+
 ## 📦 Files Added
 
 ```

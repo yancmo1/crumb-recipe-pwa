@@ -4,10 +4,11 @@ import { VitePWA } from 'vite-plugin-pwa';
 import path from 'path';
 
 export default defineConfig(() => {
-  // Used for cache-busting PWA icons/manifest across deployments.
-  // In CI we pass this via Docker build args; in dev you can set it in .env.
-  const assetVersion = (process.env.VITE_ASSET_VERSION || '').trim();
-  const iconQuery = assetVersion ? `?v=${assetVersion.slice(0, 12)}` : '';
+  // NOTE: Avoid adding query params to icon URLs.
+  // In Capacitor WKWebView, WebKit can emit noisy privacy warnings like:
+  //   "Unable to hide query parameters from script (missing data)"
+  // and query-string icons aren't needed for native builds anyway.
+  // (Service worker updates already handle cache invalidation for web.)
 
   return {
     plugins: [
@@ -40,17 +41,17 @@ export default defineConfig(() => {
         scope: '/',
         icons: [
           {
-            src: `pwa-192x192.png${iconQuery}`,
+            src: 'pwa-192x192.png',
             sizes: '192x192',
             type: 'image/png',
           },
           {
-            src: `pwa-512x512.png${iconQuery}`,
+            src: 'pwa-512x512.png',
             sizes: '512x512',
             type: 'image/png',
           },
           {
-            src: `pwa-512x512.png${iconQuery}`,
+            src: 'pwa-512x512.png',
             sizes: '512x512',
             type: 'image/png',
             purpose: 'any maskable',

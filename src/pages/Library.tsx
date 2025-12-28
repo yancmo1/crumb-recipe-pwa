@@ -4,9 +4,10 @@ import { Link } from 'react-router-dom';
 import { Plus, Search, ChefHat, Trash2, Star } from 'lucide-react';
 import { toast } from 'sonner';
 import { IosNavBar } from '../components/IosNavBar';
+import { createSampleRecipe } from '../utils/sampleRecipe';
 
 export default function Library() {
-  const { recipes, searchQuery, searchRecipes, getFilteredRecipes, isLoading, deleteRecipe, updateRecipe } = useRecipeStore();
+  const { recipes, searchQuery, searchRecipes, getFilteredRecipes, isLoading, deleteRecipe, updateRecipe, addRecipe } = useRecipeStore();
   const [localQuery, setLocalQuery] = useState(searchQuery);
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [customCategories, setCustomCategories] = useState<string[]>([]);
@@ -151,13 +152,31 @@ export default function Library() {
               }
             </p>
             {!searchQuery && (
-              <Link
-                to="/import"
-                className="inline-flex items-center px-6 py-3 bg-blueberry text-white rounded-lg hover:bg-blueberry/90 transition-colors"
-              >
-                <Plus className="h-5 w-5 mr-2" />
-                Import Recipe
-              </Link>
+              <div className="flex flex-col items-center gap-3">
+                <Link
+                  to="/import"
+                  className="inline-flex items-center px-6 py-3 bg-blueberry text-white rounded-lg hover:bg-blueberry/90 transition-colors"
+                >
+                  <Plus className="h-5 w-5 mr-2" />
+                  Import Recipe
+                </Link>
+
+                <button
+                  type="button"
+                  onClick={async () => {
+                    try {
+                      const recipe = createSampleRecipe();
+                      await addRecipe(recipe);
+                      toast.success('Sample recipe added');
+                    } catch {
+                      toast.error('Failed to add sample recipe');
+                    }
+                  }}
+                  className="inline-flex items-center px-6 py-3 bg-gray-100 text-gray-800 rounded-lg hover:bg-gray-200 transition-colors"
+                >
+                  Add sample recipe
+                </button>
+              </div>
             )}
           </div>
         ) : (
