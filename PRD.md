@@ -334,9 +334,9 @@ Import/Create → Server API → PostgreSQL → IndexedDB Cache
 ```
 
 **PWA Features:**
-- Installable on iOS Safari and Android Chrome
+- Installable on Safari (mobile/tablet) and Android Chrome
 - Proper manifest.json with icons
-- Apple-specific meta tags for iOS
+- Apple-specific meta tags for Safari (installed)
 - Standalone display mode
 - Safe area padding for notched devices
 
@@ -344,7 +344,7 @@ Import/Create → Server API → PostgreSQL → IndexedDB Cache
 - ✅ App loads and functions without internet
 - ✅ Recipes cached locally after first load
 - ✅ Changes sync to server when connection available
-- ✅ Install prompt works on iOS and Android
+- ✅ Install prompt works on Safari and Android
 - ✅ Update notification shows when new version deployed
 
 **Related Files:**
@@ -857,7 +857,7 @@ curl http://localhost:5554/health
 | Floating Timer Widget | ✅ Done | 1.1 | Multiple timers |
 | Nutrition Display | ✅ Done | 1.0 | When available |
 | Offline Mode | ✅ Done | 1.0 | Full functionality |
-| PWA Support | ✅ Done | 1.0 | iOS + Android |
+| PWA Support | ✅ Done | 1.0 | Safari (mobile/tablet) + Android |
 | Server Storage | ✅ Done | 1.0 | PostgreSQL + sync |
 | Multi-Device Sync | ✅ Done | 1.0 | Via server API |
 | Export/Import | ✅ Done | 1.0 | JSON format |
@@ -1002,22 +1002,16 @@ curl http://localhost:5554/health
 
 **Estimated Effort:** 6-8 weeks
 
-#### Phase 6: Platform Expansion (Priority: LOW)
-**Goal:** Native apps and integrations
+#### Phase 6: Integrations (Priority: LOW)
+**Goal:** Optional integrations and distribution
 
 **Features:**
-- [ ] Native iOS app (Swift)
-- [ ] Native Android app (Kotlin)
 - [ ] Browser extension
   - One-click import from any page
   - Right-click → "Save to Crumb"
 - [ ] Smart home integration
   - Google Assistant
   - Alexa
-  - HomeKit
-- [ ] Wearable support
-  - Apple Watch complications
-  - Timer controls from watch
 - [ ] IoT device integration
   - Smart oven pre-heating
   - Kitchen display tablets
@@ -1052,7 +1046,7 @@ curl http://localhost:5554/health
 
 ### 6.1 Design System
 
-**Recipe Vault Brand Palette (iOS UI/UX Refactor):**
+**Recipe Vault Brand Palette:**
 - **Sunset Orange (Primary Actions):** `#FD5E53`
 - **Slate Blue (App Chrome/Vault Accents):** `#2C3E50`
 - **Structural Dark Gray (Text/Containers):** `#4A4A4A`
@@ -1067,7 +1061,7 @@ Color usage rules:
 Gradients: subtle, smooth; used in header zones and vault accents.
 
 **Typography:**
-- **Font Family:** System font stack (San Francisco on iOS, Roboto on Android)
+- **Font Family:** System font stack
 - **Headings:** Semi-bold (600)
 - **Body:** Regular (400)
 - **Small Text:** Regular (400), slightly reduced opacity
@@ -1097,7 +1091,7 @@ Gradients: subtle, smooth; used in header zones and vault accents.
 - Tablet: 640-1024px (2 columns)
 - Desktop: >1024px (3+ columns)
 
-**iOS Safari Optimizations:**
+**Safari/WebKit Optimizations:**
 - Safe area padding for notched devices
 - Proper viewport meta tags
 - Apple touch icons
@@ -1122,7 +1116,7 @@ Gradients: subtle, smooth; used in header zones and vault accents.
 
 ---
 
-## 6.4 iOS UI/UX Redesign Compliance (Recipe Vault)
+## 6.4 UI/UX Redesign Compliance (Recipe Vault)
 
 Implemented screens and changes to meet the PRD:
 
@@ -1315,7 +1309,7 @@ Next steps:
 **Must Have (P0):**
 - ✅ Import success rate >75%
 - ✅ App works offline
-- ✅ PWA installable on iOS/Android
+- ✅ PWA installable on Safari/Android
 - ✅ Core features functional without bugs
 - ✅ Deployment automated via CI/CD
 

@@ -250,7 +250,7 @@ curl -X POST http://localhost:3000/api/import \
 
 ## PWA Features
 
-### iOS Safari Support
+### Safari (mobile/tablet) support
 - Proper `apple-mobile-web-app-*` meta tags
 - Touch icons and splash screens
 - Standalone display mode
@@ -270,7 +270,7 @@ curl -X POST http://localhost:3000/api/import \
 
 ## Browser Support
 
-- ✅ iOS Safari 14+ (primary target)
+- ✅ Safari (mobile/tablet) 14+ (primary target)
 - ✅ Chrome/Edge 88+
 - ✅ Firefox 85+
 - ⚠️ Safari Desktop (limited PWA features)

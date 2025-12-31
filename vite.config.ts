@@ -5,9 +5,9 @@ import path from 'path';
 
 export default defineConfig(() => {
   // NOTE: Avoid adding query params to icon URLs.
-  // In Capacitor WKWebView, WebKit can emit noisy privacy warnings like:
+  // In some WebKit environments, the browser can emit noisy privacy warnings like:
   //   "Unable to hide query parameters from script (missing data)"
-  // and query-string icons aren't needed for native builds anyway.
+  // and query-string icons aren't needed anyway.
   // (Service worker updates already handle cache invalidation for web.)
 
   return {
