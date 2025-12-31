@@ -22,6 +22,7 @@ export default function RecipeDetail() {
     toggleStep,
     setMultiplier,
     resetSession,
+    clearSession,
     getTimeRemaining
   } = useCookSession();
   
@@ -140,6 +141,11 @@ export default function RecipeDetail() {
   const handleResetSession = () => {
     resetSession();
     toast.success('Session reset!');
+  };
+
+  const handleFinishedCooking = () => {
+    clearSession();
+    toast.success('Cooking session finished!');
   };
 
   const handleMultiplierChange = (newMultiplier: number | string) => {
@@ -360,10 +366,11 @@ export default function RecipeDetail() {
               Session expires in {hoursRemaining}h {minutesRemaining}m
             </span>
             <button
-              onClick={handleResetSession}
+              type="button"
+              onClick={handleFinishedCooking}
               className="text-sm underline hover:no-underline"
             >
-              Reset
+              Finished cooking
             </button>
           </div>
         </div>
