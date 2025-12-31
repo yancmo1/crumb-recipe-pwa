@@ -2,7 +2,7 @@ import type { Recipe } from '../types';
 
 function createId(): string {
   const c = typeof crypto !== 'undefined' ? (crypto as Crypto | undefined) : undefined;
-  // iOS 16+ has crypto.randomUUID.
+  // Prefer randomUUID when available.
   if (c && 'randomUUID' in c && typeof c.randomUUID === 'function') return c.randomUUID();
   return `r_${Math.random().toString(16).slice(2)}_${Date.now()}`;
 }
@@ -11,8 +11,8 @@ export function createSampleRecipe(nowMs: number = Date.now()): Recipe {
   return {
     id: createId(),
     title: 'Skillet Toast (Sample)',
-    sourceUrl: 'https://crumb.app/sample/skillet-toast',
-    sourceName: 'Crumb Sample',
+    sourceUrl: 'https://crumbworks.app/sample/skillet-toast',
+    sourceName: 'CrumbWorks Sample',
     category: 'Breakfast',
     yield: '1 toast',
     times: { prep: 1, cook: 6, total: 7 },
@@ -28,7 +28,7 @@ export function createSampleRecipe(nowMs: number = Date.now()): Recipe {
       'Toast the bread 2 minutes per side.',
       'Rest for 1 minute, then serve.'
     ],
-    tips: ['This sample recipe exists so you can test timers + Live Activities offline.'],
+    tips: ['This sample recipe exists so you can test timers offline.'],
     createdAt: nowMs,
     updatedAt: nowMs
   };

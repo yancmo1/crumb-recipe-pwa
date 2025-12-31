@@ -8,9 +8,6 @@
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "icons": "node scripts/generate-icons.mjs",
-    "ios:spm:repair": "node scripts/ios-spm-repair.mjs --force",
-    "ios:spm:repair:dry": "node scripts/ios-spm-repair.mjs --dry-run",
-    "ios:spm:status": "node scripts/ios-spm-status.mjs",
     "test": "vitest",
     "test:e2e": "playwright test",
     "server": "node server/index.js",
@@ -20,10 +17,6 @@
     "docker:dev": "docker compose -f docker-compose.dev.yml up --build"
   },
   "dependencies": {
-    "@capacitor/cli": "^8.0.0",
-    "@capacitor/core": "^8.0.0",
-    "@capacitor/ios": "^8.0.0",
-    "@capacitor/local-notifications": "^8.0.0",
     "@mozilla/readability": "^0.4.4",
     "cheerio": "^1.0.0-rc.12",
     "class-variance-authority": "^0.7.0",

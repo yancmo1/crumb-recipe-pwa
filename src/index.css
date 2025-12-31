@@ -60,40 +60,51 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* iOS-ish UI primitives (kept light so the web still looks good) */
-.ios-page {
-  /* iOS grouped background (systemGroupedBackground-ish) */
-  background: rgb(242 242 247);
+
+/* CrumbWorks LOCKED brand gradients (from approved artwork — DO NOT modify) */
+
+/* Header bar gradient: #CB3002 → #F85F1E → #E77320 (top → bottom) */
+.rv-header-gradient {
+  background: linear-gradient(180deg, #CB3002 0%, #F85F1E 50%, #E77320 100%);
 }
 
-.ios-card {
-  background: rgba(255, 255, 255, 0.9);
-  border: 1px solid rgba(0, 0, 0, 0.05);
-  border-radius: 16px;
+/* Primary CTA button gradient: #F85F1E → #CB3002 (left → right) */
+.rv-cta-gradient {
+  background: linear-gradient(90deg, #F85F1E 0%, #CB3002 100%);
 }
 
-.ios-nav {
-  background: rgba(255, 255, 255, 0.78);
-  -webkit-backdrop-filter: saturate(180%) blur(20px);
-  backdrop-filter: saturate(180%) blur(20px);
+/* Hero radial glow behind vault art (uses accent orange) */
+.rv-hero-glow {
+  background: radial-gradient(circle at center, rgba(231,115,32,0.25) 0%, transparent 60%);
 }
 
-.ios-nav-title {
-  letter-spacing: -0.01em;
+/* Thumbnail placeholder gradient when no image */
+.rv-thumb-placeholder {
+  background: linear-gradient(180deg, #F85F1E 0%, #E77320 100%);
 }
 
-.dark .ios-page {
-  background: rgb(0 0 0);
+/* CTA button shadow (subtle, no flat elevation) */
+.rv-cta-shadow {
+  box-shadow: 0 4px 14px rgba(0,0,0,0.18);
 }
 
-.dark .ios-card {
-  background: rgba(28, 28, 30, 0.92);
-  border-color: rgba(255, 255, 255, 0.08);
+/* Card subtle shadow (12px radius, 16px padding specified in components) */
+.rv-card-shadow {
+  box-shadow: 0 2px 8px rgba(0,0,0,0.10);
 }
 
-.dark .ios-nav {
-  background: rgba(28, 28, 30, 0.72);
-  border-color: rgba(255, 255, 255, 0.08);
+/* Accessible focus ring defaults — uses accent orange */
+button, a, input, select, textarea {
+  outline: none;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  box-shadow: 0 0 0 2px #E77320, 0 0 0 4px rgba(0,0,0,0.08);
+  border-radius: 10px;
 }
 
 /* Print styles */
@@ -133,7 +144,7 @@ body {
   }
 }
 
-/* iOS Safari specific */
+/* Safari/WebKit specific */
 @supports (-webkit-touch-callout: none) {
   .safe-top {
     padding-top: env(safe-area-inset-top);
@@ -149,9 +160,5 @@ body {
 
   .safe-right {
     padding-right: env(safe-area-inset-right);
-  }
-
-  .ios-padding {
-    padding-bottom: env(safe-area-inset-bottom);
   }
 }

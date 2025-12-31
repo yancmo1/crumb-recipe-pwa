@@ -4,7 +4,7 @@ import { BrowserRouter } from 'react-router-dom'
 import App from './App.tsx'
 import './index.css'
 
-// Improve device debugging: surface real errors/stacks in Xcode console.
+// Improve device debugging: surface real errors/stacks in the console.
 window.addEventListener('error', (event) => {
   // eslint-disable-next-line no-console
   console.error('[window.error]', {

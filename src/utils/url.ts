@@ -1,7 +1,7 @@
 /**
  * URL utilities.
  *
- * iOS/WebKit can throw opaque errors like:
+ * WebKit can throw opaque errors like:
  *   "The string did not match the expected pattern."
  * when given slightly-invalid URLs (whitespace, missing scheme, etc.).
  */

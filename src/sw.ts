@@ -58,15 +58,15 @@ self.addEventListener('push', (event) => {
   };
 
   const title = data.title || 'Timer done';
-  const icon = data.icon || '/pwa-192x192.png';
-  const badge = data.badge || '/pwa-192x192.png';
+  const icon = data.icon || '/crumbworks-192x192.png';
+  const badge = data.badge || '/crumbworks-192x192.png';
 
   const options: NotificationOptions & { [key: string]: unknown } = {
     body: data.body,
     tag: data.tag,
     icon,
     badge,
-    // iOS may ignore these, but they help on other platforms.
+    // Some platforms may ignore these, but they help where supported.
     requireInteraction: true,
     vibrate: [200, 100, 200],
     data: {
@@ -155,7 +155,7 @@ self.addEventListener('message', (event) => {
       activeTimers.delete(msg.id);
       
       const title = msg.notification.title || 'Timer done';
-      const icon = '/pwa-192x192.png';
+      const icon = '/crumbworks-192x192.png';
       
       const options: NotificationOptions & { [key: string]: unknown } = {
         body: msg.notification.body,

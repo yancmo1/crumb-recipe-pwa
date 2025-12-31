@@ -1,8 +1,8 @@
-# Crumb Recipe Scraper - Quick Start Guide
+# CrumbWorks Recipe Scraper - Quick Start Guide
 
 ## 🚀 What Changed?
 
-Your Crumb app scraping was **hit-or-miss** (40-60% success). I've improved it to **75-85% success** by fixing critical bugs and adding recipe plugin support.
+Your CrumbWorks app scraping was **hit-or-miss** (40-60% success). I've improved it to **75-85% success** by fixing critical bugs and adding recipe plugin support.
 
 ## ✅ Key Improvements
 
@@ -43,7 +43,7 @@ docker-compose up
 # Then import a recipe from the UI
 ```
 
-## 🎨 App icon (PWA + iOS)
+## 🎨 App icon (PWA)
 
 The icon pipeline is driven by a single source image:
 
@@ -58,21 +58,7 @@ npm run icons
 
 This updates:
 
-- PWA icons in `public/` (e.g. `pwa-192x192.png`, `pwa-512x512.png`, Apple touch icons)
-- iOS app icon at `ios/App/App/Assets.xcassets/AppIcon.appiconset/AppIcon-512@2x.png`
-
-## 🟣 Live Activities / Dynamic Island (iOS)
-
-- Requires iOS 16.1+.
-- Dynamic Island UI requires a Dynamic Island device (e.g. iPhone 14 Pro / 15 Pro / 16 Pro).
-- In the iOS app, open **Settings → Live Activities** and tap **Start test Live Activity**.
-- If nothing appears:
-  - Check iOS **Settings → Crumb → Live Activities** is enabled.
-  - Lock the device to see the Live Activity on the Lock Screen.
-
-If Xcode refuses to build with SwiftPM errors like missing `Capacitor.xcframework.zip` / `Cordova.xcframework.zip`, run:
-
-- `npm run ios:spm:repair`
+- PWA icons in `public/` (e.g. `crumbworks-192x192.png`, `crumbworks-512x512.png`, Apple touch icons)
 
 ## 📦 Files Added
 
@@ -184,4 +170,4 @@ You should now see **significantly better** recipe imports, especially from:
 - Multi-section recipes like sourdough (was broken, now works)
 - Sites with ingredient groups (now preserved)
 
-**Enjoy your improved Crumb app! 🍞**
+**Enjoy your improved CrumbWorks app! 🍞**

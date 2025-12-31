@@ -50,11 +50,39 @@ export default {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
-        // Custom colors for kitchen theme
+        // Legacy kitchen theme (kept for backward compatibility)
         oatmeal: '#F2EFEA',
         blueberry: '#7C8FB2',
         dough: '#E9D8A6',
         sage: '#A3B18A',
+
+        // CrumbWorks LOCKED brand palette (from approved artwork — DO NOT modify)
+        // Header bar gradient: #CB3002 → #F85F1E → #E77320 (top → bottom)
+        rvOrangeTop: '#CB3002',     // Header gradient top
+        rvOrangeMid: '#F85F1E',     // Header gradient mid / CTA start
+        rvOrangeBottom: '#E77320',  // Header gradient bottom / accent
+        // Sidebar/drawer background
+        rvBlue: '#162841',          // Sidebar solid bg
+        // Neutral page background
+        rvPageBg: '#F7F3EE',        // Warm neutral page bg
+        // Neutral text gray
+        rvGray: '#53575E',          // Body/structural text
+        // Accent/active indicator
+        rvAccent: '#E77320',        // Active tab, indicator bar
+        // CTA button gradient: #F85F1E → #CB3002 (left → right)
+        rvCtaStart: '#F85F1E',      // CTA gradient start
+        rvCtaEnd: '#CB3002',        // CTA gradient end
+        // Cards
+        rvCardBg: '#FFFFFF',        // Card surfaces
+        rvInputBg: '#F8F8F8',       // Input field background
+        // Backwards compat aliases (map old names to new)
+        rvOrange: '#F85F1E',        // Alias for rvOrangeMid
+        rvYellow: '#E77320',        // Map old yellow to accent
+        rvOrangeEnd: '#CB3002'      // Alias for rvOrangeTop
+      },
+      boxShadow: {
+        'rv-card': '0 2px 8px rgba(0,0,0,0.10)',
+        'rv-cta': '0 4px 14px rgba(0,0,0,0.18)',
       },
       borderRadius: {
         lg: "var(--radius)",

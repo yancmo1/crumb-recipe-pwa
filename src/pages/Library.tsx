@@ -1,11 +1,18 @@
 import { useMemo, useState } from 'react';
 import { useRecipeStore } from '../state/session';
 import { Link } from 'react-router-dom';
-import { Plus, Search, ChefHat, Trash2, Star } from 'lucide-react';
+import { Plus, Search, Trash2, Star } from 'lucide-react';
 import { toast } from 'sonner';
-import { IosNavBar } from '../components/IosNavBar';
+import { RvLayout } from '../components/RvLayout';
 import { createSampleRecipe } from '../utils/sampleRecipe';
 
+/**
+ * Recipe List screen (deterministic per spec §15)
+ * - Mobile: single column list
+ * - Tablet+ (md:768px): 2-column grid
+ * - Desktop (lg:1024px): 3-column grid if space allows
+ * - Cards: 12px radius, shadow, 140px thumbnail (or placeholder gradient)
+ */
 export default function Library() {
   const { recipes, searchQuery, searchRecipes, getFilteredRecipes, isLoading, deleteRecipe, updateRecipe, addRecipe } = useRecipeStore();
   const [localQuery, setLocalQuery] = useState(searchQuery);
@@ -35,14 +42,13 @@ export default function Library() {
   };
 
   const handleDelete = async (e: React.MouseEvent, recipeId: string, recipeTitle: string) => {
-    e.preventDefault(); // Prevent navigation to recipe detail
+    e.preventDefault();
     e.stopPropagation();
-    
     if (confirm(`Are you sure you want to delete "${recipeTitle}"? This action cannot be undone.`)) {
       try {
         await deleteRecipe(recipeId);
         toast.success('Recipe deleted successfully');
-      } catch (error) {
+      } catch {
         toast.error('Failed to delete recipe');
       }
     }
@@ -51,17 +57,11 @@ export default function Library() {
   const handleToggleFavorite = async (e: React.MouseEvent, recipeId: string) => {
     e.preventDefault();
     e.stopPropagation();
-
     const recipe = recipes.find((r) => r.id === recipeId);
     if (!recipe) return;
-
     try {
-      await updateRecipe({
-        ...recipe,
-        isFavorite: !recipe.isFavorite,
-        updatedAt: Date.now()
-      });
-    } catch (error) {
+      await updateRecipe({ ...recipe, isFavorite: !recipe.isFavorite, updatedAt: Date.now() });
+    } catch {
       toast.error('Failed to update favorite');
     }
   };
@@ -76,91 +76,75 @@ export default function Library() {
   };
 
   return (
-    <div className="min-h-screen ios-page">
-      <IosNavBar
-        title="Crumb"
-        right={
-          <Link to="/settings" className="text-blueberry font-medium">
-            Settings
-          </Link>
-        }
-      />
-
-      <div className="max-w-md md:max-w-3xl lg:max-w-5xl mx-auto px-4 py-5">
+    <RvLayout title="Recipes">
+      {/* Content area */}
+      <div className="flex-1 px-4 md:px-6 py-5 max-w-[1200px] mx-auto w-full">
         {/* Search */}
-        <div className="relative mb-4 ios-card px-3 py-2">
-          <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-gray-400 h-5 w-5" />
+        <div className="relative mb-4 bg-white rounded-xl shadow-rv-card px-4 py-3">
+          <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-rvGray/50 h-5 w-5" />
           <input
             type="text"
             placeholder="Search"
             value={localQuery}
             onChange={(e) => handleSearch(e.target.value)}
-            className="w-full pl-10 pr-4 py-3 bg-transparent border-0 focus:ring-0 focus:outline-none text-[17px]"
+            className="w-full pl-10 pr-4 py-2 bg-transparent border-0 focus:ring-0 focus:outline-none text-base text-rvGray"
           />
         </div>
 
         {/* Category filter */}
-        <div className="flex items-center gap-2 mb-5 ios-card p-3">
+        <div className="flex items-center gap-2 mb-5 bg-white rounded-xl shadow-rv-card p-3">
           <select
             value={selectedCategory}
             onChange={(e) => setSelectedCategory(e.target.value)}
-            className="flex-1 px-3 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blueberry/20 focus:border-blueberry/30 bg-white/80 text-gray-900"
+            className="flex-1 px-3 py-2 border border-rvGray/20 rounded-lg focus:ring-2 focus:ring-rvOrange/30 focus:border-rvOrange bg-rvInputBg text-rvGray"
             aria-label="Filter by category"
           >
             <option value="All">All categories</option>
             {availableCategories.map((cat) => (
-              <option key={cat} value={cat}>
-                {cat}
-              </option>
+              <option key={cat} value={cat}>{cat}</option>
             ))}
           </select>
           <button
             type="button"
             onClick={handleAddCategory}
-            className="px-3 py-3 bg-gray-100/80 text-gray-700 rounded-xl hover:bg-gray-200/80 transition-colors"
+            className="px-3 py-2 bg-rvInputBg text-rvGray rounded-lg hover:bg-gray-200 transition-colors"
             title="Add a new category"
           >
             +
           </button>
         </div>
 
-        {/* Recipe List */}
+        {/* Recipe grid/list */}
         {isLoading ? (
-          <div className="space-y-4">
-            {[...Array(3)].map((_, i) => (
-              <div key={i} className="ios-card p-4 animate-pulse">
-                <div className="flex space-x-4">
-                  <div className="w-16 h-16 bg-gray-300 rounded-lg"></div>
-                  <div className="flex-1 space-y-2">
-                    <div className="h-4 bg-gray-300 rounded w-3/4"></div>
-                    <div className="h-3 bg-gray-300 rounded w-1/2"></div>
-                  </div>
-                </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[...Array(6)].map((_, i) => (
+              <div key={i} className="bg-white rounded-xl shadow-rv-card p-4 animate-pulse">
+                <div className="h-[140px] bg-gray-200 rounded-lg mb-4" />
+                <div className="h-5 bg-gray-200 rounded w-3/4 mb-2" />
+                <div className="h-4 bg-gray-200 rounded w-1/2" />
               </div>
             ))}
           </div>
         ) : visibleRecipes.length === 0 ? (
           <div className="text-center py-12">
-            <ChefHat className="h-16 w-16 mx-auto text-gray-400 mb-4" />
-            <h3 className="text-lg font-semibold text-gray-600 mb-2">
+            <div className="w-20 h-20 mx-auto mb-4 rv-thumb-placeholder rounded-xl flex items-center justify-center">
+              <Plus className="h-10 w-10 text-white" />
+            </div>
+            <h3 className="text-xl font-bold text-rvGray mb-2">
               {searchQuery ? 'No recipes found' : 'No recipes yet'}
             </h3>
-            <p className="text-gray-500 mb-6">
-              {searchQuery 
-                ? 'Try searching with different keywords'
-                : 'Import your first recipe to get started'
-              }
+            <p className="text-rvGray/70 mb-6">
+              {searchQuery ? 'Try searching with different keywords' : 'Import your first recipe to get started'}
             </p>
             {!searchQuery && (
               <div className="flex flex-col items-center gap-3">
                 <Link
                   to="/import"
-                  className="inline-flex items-center px-6 py-3 bg-blueberry text-white rounded-lg hover:bg-blueberry/90 transition-colors"
+                  className="inline-flex items-center justify-center h-12 px-6 rv-cta-gradient rv-cta-shadow text-white font-bold rounded-full hover:opacity-95 transition-opacity"
                 >
                   <Plus className="h-5 w-5 mr-2" />
                   Import Recipe
                 </Link>
-
                 <button
                   type="button"
                   onClick={async () => {
@@ -172,7 +156,7 @@ export default function Library() {
                       toast.error('Failed to add sample recipe');
                     }
                   }}
-                  className="inline-flex items-center px-6 py-3 bg-gray-100 text-gray-800 rounded-lg hover:bg-gray-200 transition-colors"
+                  className="inline-flex items-center px-6 py-3 bg-white text-rvGray rounded-lg shadow-rv-card hover:bg-gray-50 transition-colors"
                 >
                   Add sample recipe
                 </button>
@@ -180,76 +164,62 @@ export default function Library() {
             )}
           </div>
         ) : (
-          <div className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {visibleRecipes.map((recipe) => (
-              <div
+              <Link
                 key={recipe.id}
-                className="ios-card p-4 transition-shadow relative group"
+                to={`/recipe/${recipe.id}`}
+                className="block bg-white rounded-xl shadow-rv-card p-4 relative group hover:shadow-lg transition-shadow"
               >
-                <Link
-                  to={`/recipe/${recipe.id}`}
-                  className="block"
-                >
-                  <div className="flex space-x-4">
-                    {recipe.image ? (
-                      <img
-                        src={recipe.image}
-                        alt={recipe.title}
-                        className="w-16 h-16 object-cover rounded-lg"
-                      />
-                    ) : (
-                      <div className="w-16 h-16 bg-dough rounded-lg flex items-center justify-center">
-                        <ChefHat className="h-8 w-8 text-gray-600" />
-                      </div>
-                    )}
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold text-gray-900 truncate pr-8">
-                        {recipe.title}
-                      </h3>
-                      <p className="text-sm text-gray-600 truncate">
-                        {recipe.sourceName || 'Unknown Source'}
-                      </p>
-                      {recipe.category && recipe.category.trim() && (
-                        <div className="mt-1">
-                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-gray-100 text-gray-700">
-                            {recipe.category.trim()}
-                          </span>
-                        </div>
-                      )}
-                      <div className="flex items-center space-x-4 mt-1 text-xs text-gray-500">
-                        {recipe.yield && (
-                          <span>Serves {recipe.yield}</span>
-                        )}
-                        {recipe.times?.total && (
-                          <span>{recipe.times.total} min</span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </Link>
+                {/* Thumbnail */}
+                {recipe.image ? (
+                  <img
+                    src={recipe.image}
+                    alt={recipe.title}
+                    className="w-full h-[140px] object-cover rounded-lg mb-4"
+                  />
+                ) : (
+                  <div className="w-full h-[140px] rv-thumb-placeholder rounded-lg mb-4" />
+                )}
+
+                {/* Title */}
+                <h3 className="font-bold text-xl text-rvGray truncate pr-16 mb-1">
+                  {recipe.title}
+                </h3>
+
+                {/* Ingredient snippet */}
+                {recipe.ingredients.length > 0 && (
+                  <p className="text-sm text-rvGray/70 truncate">
+                    {recipe.ingredients.slice(0, 3).map((i) => i.item || i.raw).join(', ')}
+                  </p>
+                )}
+
+                {/* Meta info */}
+                <div className="flex items-center gap-3 mt-2 text-xs text-rvGray/60">
+                  {recipe.yield && <span>Serves {recipe.yield}</span>}
+                  {recipe.times?.total && <span>{recipe.times.total} min</span>}
+                </div>
 
                 {/* Favorite button */}
                 <button
                   onClick={(e) => handleToggleFavorite(e, recipe.id)}
-                  className={`absolute top-4 right-10 p-1 rounded transition-colors ${
-                    recipe.isFavorite
-                      ? 'text-yellow-500 hover:text-yellow-600'
-                      : 'text-gray-400 hover:text-gray-600 hover:bg-gray-50'
+                  className={`absolute top-4 right-12 p-2 rounded-lg transition-colors ${
+                    recipe.isFavorite ? 'text-rvYellow' : 'text-rvGray/40 hover:text-rvGray/60'
                   }`}
                   title={recipe.isFavorite ? 'Unfavorite' : 'Favorite'}
                 >
-                  <Star className="h-4 w-4" fill={recipe.isFavorite ? 'currentColor' : 'none'} />
+                  <Star className="h-5 w-5" fill={recipe.isFavorite ? 'currentColor' : 'none'} />
                 </button>
-                
+
                 {/* Delete button */}
                 <button
                   onClick={(e) => handleDelete(e, recipe.id, recipe.title)}
-                  className="absolute top-4 right-4 p-1 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors opacity-0 group-hover:opacity-100"
+                  className="absolute top-4 right-4 p-2 text-rvGray/40 hover:text-red-500 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
                   title="Delete recipe"
                 >
-                  <Trash2 className="h-4 w-4" />
+                  <Trash2 className="h-5 w-5" />
                 </button>
-              </div>
+              </Link>
             ))}
           </div>
         )}
@@ -257,11 +227,11 @@ export default function Library() {
         {/* Floating Action Button */}
         <Link
           to="/import"
-          className="fixed bg-blueberry text-white p-4 rounded-full shadow-lg hover:bg-blueberry/90 transition-colors bottom-[calc(1.5rem+env(safe-area-inset-bottom))] right-[calc(1.5rem+env(safe-area-inset-right))]"
+          className="fixed rv-cta-gradient rv-cta-shadow text-white p-4 rounded-full hover:opacity-95 transition-opacity bottom-[calc(1.5rem+env(safe-area-inset-bottom))] right-[calc(1.5rem+env(safe-area-inset-right))]"
         >
           <Plus className="h-6 w-6" />
         </Link>
       </div>
-    </div>
+    </RvLayout>
   );
 }

@@ -54,8 +54,8 @@ echo "🍳 Crumb PWA Icon" > public/apple-touch-icon.png
 echo "🍳 Crumb PWA Icon 152" > public/apple-touch-icon-152x152.png
 echo "🍳 Crumb PWA Icon 167" > public/apple-touch-icon-167x167.png
 echo "🍳 Crumb PWA Icon 180" > public/apple-touch-icon-180x180.png
-echo "🍳 Crumb PWA Icon 192" > public/pwa-192x192.png
-echo "🍳 Crumb PWA Icon 512" > public/pwa-512x512.png
+echo "🍳 CrumbWorks PWA Icon 192" > public/crumbworks-192x192.png
+echo "🍳 CrumbWorks PWA Icon 512" > public/crumbworks-512x512.png
 
 # Create placeholder splash screens
 echo "🍳 Crumb Splash 750x1334" > public/splash-750x1334.png

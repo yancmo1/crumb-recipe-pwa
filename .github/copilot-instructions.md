@@ -1,5 +1,11 @@
 # Copilot instructions for `crumb-recipe-pwa`
 
+## Instruction structure (read these first)
+- UI rules: `.github/instructions/ui.instructions.md`
+- UI Canon (tokens + visuals): `.github/instructions/UI-Cannon-and-style-guide.md`
+- PWA rules: `.github/instructions/pwa.instructions.md`
+- Server/API rules: `.github/instructions/server.instructions.md`
+
 ## Big picture (how the app is split)
 - Frontend: React + Vite PWA in `src/` (routes in `src/App.tsx`). Service worker is registered via `virtual:pwa-register`.
 - Backend: Express (ESM) in `server/index.js`.
@@ -14,7 +20,7 @@
   - Keep endpoints stable: `/api/recipes`, `/api/recipes/:id`, `/api/import`, `/health`.
 - Recipe import pipeline (server): `POST /api/import` → `extractRecipeImproved(url)` in `server/extractors/improved-extractor.js`.
   - Strategy order matters: plugin extraction first (`server/extractors/plugins.js`), then JSON-LD, then print, then heuristics.
-  - Ingredients may include group headers using `IngredientToken.isGroupHeader` and `raw` like `"**For the dough:**"` (see `src/types.ts`). Preserve this shape when editing extractors.
+  - Ingredients may include group headers using `IngredientToken.isGroupHeader` and `raw` like "**For the dough:**" (see `src/types.ts`). Preserve this shape when editing extractors.
 
 ## Local dev workflows (commands that actually match this repo)
 - Frontend only (offline mode is fine): `npm run dev` (Vite on 5173).
@@ -29,11 +35,16 @@
 ## Docker/CI notes (don’t guess ports)
 - Image build/push: GitHub Actions in `.github/workflows/build-push.yml` (publishes to GHCR).
 - Server reads `PORT` at runtime; `/health` is used for health checks.
-- Source of truth for dev ports is `server/index.js` + `vite.config.ts` (some docs/configs mention other ports; prefer the code + Vite proxy config).
-- If you change runtime ports, update *both* `docker-compose.yml` and any reverse proxy expectations.
+- Source of truth for dev ports is `server/index.js` + `vite.config.ts`.
+- If you change runtime ports, update both `docker-compose.yml` and any reverse proxy expectations.
 
 ## When making changes
 - Prefer modifying the canonical implementations:
   - Import logic: `server/extractors/*` (not ad-hoc parsing in routes).
   - Storage behavior: `src/db.ts` (not direct `fetch` sprinkled through UI).
   - State: `src/state/session.ts` (Zustand stores for recipes/sessions/settings).
+
+## PR completion expectations
+- Follow `.github/instructions/*.instructions.md`.
+- UI PRs must include `/styleguide` screenshots (mobile/tablet/desktop) per the UI instructions.
+- Do not claim completion without evidence.

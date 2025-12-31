@@ -334,9 +334,9 @@ Import/Create → Server API → PostgreSQL → IndexedDB Cache
 ```
 
 **PWA Features:**
-- Installable on iOS Safari and Android Chrome
+- Installable on Safari (mobile/tablet) and Android Chrome
 - Proper manifest.json with icons
-- Apple-specific meta tags for iOS
+- Apple-specific meta tags for Safari (installed)
 - Standalone display mode
 - Safe area padding for notched devices
 
@@ -344,7 +344,7 @@ Import/Create → Server API → PostgreSQL → IndexedDB Cache
 - ✅ App loads and functions without internet
 - ✅ Recipes cached locally after first load
 - ✅ Changes sync to server when connection available
-- ✅ Install prompt works on iOS and Android
+- ✅ Install prompt works on Safari and Android
 - ✅ Update notification shows when new version deployed
 
 **Related Files:**
@@ -857,7 +857,7 @@ curl http://localhost:5554/health
 | Floating Timer Widget | ✅ Done | 1.1 | Multiple timers |
 | Nutrition Display | ✅ Done | 1.0 | When available |
 | Offline Mode | ✅ Done | 1.0 | Full functionality |
-| PWA Support | ✅ Done | 1.0 | iOS + Android |
+| PWA Support | ✅ Done | 1.0 | Safari (mobile/tablet) + Android |
 | Server Storage | ✅ Done | 1.0 | PostgreSQL + sync |
 | Multi-Device Sync | ✅ Done | 1.0 | Via server API |
 | Export/Import | ✅ Done | 1.0 | JSON format |
@@ -1002,22 +1002,16 @@ curl http://localhost:5554/health
 
 **Estimated Effort:** 6-8 weeks
 
-#### Phase 6: Platform Expansion (Priority: LOW)
-**Goal:** Native apps and integrations
+#### Phase 6: Integrations (Priority: LOW)
+**Goal:** Optional integrations and distribution
 
 **Features:**
-- [ ] Native iOS app (Swift)
-- [ ] Native Android app (Kotlin)
 - [ ] Browser extension
   - One-click import from any page
   - Right-click → "Save to Crumb"
 - [ ] Smart home integration
   - Google Assistant
   - Alexa
-  - HomeKit
-- [ ] Wearable support
-  - Apple Watch complications
-  - Timer controls from watch
 - [ ] IoT device integration
   - Smart oven pre-heating
   - Kitchen display tablets
@@ -1052,16 +1046,22 @@ curl http://localhost:5554/health
 
 ### 6.1 Design System
 
-**Color Palette (Kitchen Theme):**
-- **Primary:** Warm orange/terracotta (`#E07A5F`)
-- **Secondary:** Sage green (`#81B29A`)
-- **Accent:** Warm yellow (`#F4A261`)
-- **Background:** Cream (`#F7F3E9`)
-- **Text:** Dark charcoal (`#2D3142`)
-- **Borders:** Light gray (`#E0E0E0`)
+**CrumbWorks Brand Palette:**
+- **Sunset Orange (Primary Actions):** `#FD5E53`
+- **Slate Blue (App Chrome/Vault Accents):** `#2C3E50`
+- **Structural Dark Gray (Text/Containers):** `#4A4A4A`
+- **Soft Yellow (Highlights):** `#F7D774`
+
+Color usage rules:
+- Orange for primary CTAs, header gradient bases
+- Blue for navigation drawer/sidebar and chrome
+- Gray for text and neutral structure
+- Yellow sparingly for highlights/status
+
+Gradients: subtle, smooth; used in header zones and vault accents.
 
 **Typography:**
-- **Font Family:** System font stack (San Francisco on iOS, Roboto on Android)
+- **Font Family:** System font stack
 - **Headings:** Semi-bold (600)
 - **Body:** Regular (400)
 - **Small Text:** Regular (400), slightly reduced opacity
@@ -1091,7 +1091,7 @@ curl http://localhost:5554/health
 - Tablet: 640-1024px (2 columns)
 - Desktop: >1024px (3+ columns)
 
-**iOS Safari Optimizations:**
+**Safari/WebKit Optimizations:**
 - Safe area padding for notched devices
 - Proper viewport meta tags
 - Apple touch icons
@@ -1113,6 +1113,67 @@ curl http://localhost:5554/health
 - Skip navigation links
 - Reduced motion support
 - Full keyboard accessibility audit
+
+---
+
+## 6.4 UI/UX Redesign Compliance (CrumbWorks)
+
+Implemented screens and changes to meet the PRD:
+
+- Launch/Home Screen (`src/pages/Home.tsx`)
+  - Full-bleed sunset orange header gradient (`.rv-header-gradient`)
+  - Centered hero vault motif (lock icon fallback)
+  - Primary CTA: Get Started (orange pill)
+
+- Navigation Drawer/Sidebar (`src/components/NavDrawer.tsx`)
+  - Slides from left, background slate blue
+  - Menu: Recipes, Settings, About
+  - Integrated into nav bars as left control
+
+- Recipe List Screen (`src/pages/Library.tsx`)
+  - Header gradient zone
+  - Semi-flat recipe cards with light shadow
+  - Primary import CTA updated to orange
+
+- Recipe Detail Screen (`src/pages/RecipeDetail.tsx`)
+  - Primary actions: Edit Recipe (orange), Share (Web Share / clipboard)
+  - Existing cook mode preserved
+
+- Recipe Editor Screen (`src/pages/EditRecipe.tsx`)
+  - Inputs: Name, Ingredients (multi-line), Steps (multi-line), Tags
+  - Sticky Save button (orange)
+  - Sanitizes input (trims, splits lines; preserves group headers via **Header:**)
+
+- Accessibility
+  - Global focus-visible ring styles with orange accent
+  - Keyboard navigation through drawer and forms
+
+- Performance
+  - Minimal route-based additions; large assets deferred
+
+Routes updated in `src/App.tsx`:
+- `/` and `/home` → Home
+- `/library` → Recipe List
+- `/recipe/:id` → Detail
+- `/recipe/:id/edit` → Editor
+
+Tailwind theme updated (`tailwind.config.js`) with brand tokens:
+- `rvOrange`, `rvBlue`, `rvGray`, `rvYellow`
+
+CSS additions (`src/index.css`):
+- `.rv-header-gradient`, `.rv-radial-accent`, focus-visible rings
+
+Definition of Done checks (initial pass):
+- App launches without clipping; header gradient is full-bleed
+- Navigation routes verified
+- Palette and layout adhere to PRD
+- Focus rings and contrast present; further audit recommended
+- Offline persistence unchanged (IndexedDB via `src/db.ts`)
+
+Next steps:
+- Add About page content
+- Audit icon exports (1024×1024 PNG, sRGB)
+- Run full accessibility and performance audits
 
 ---
 
@@ -1248,7 +1309,7 @@ curl http://localhost:5554/health
 **Must Have (P0):**
 - ✅ Import success rate >75%
 - ✅ App works offline
-- ✅ PWA installable on iOS/Android
+- ✅ PWA installable on Safari/Android
 - ✅ Core features functional without bugs
 - ✅ Deployment automated via CI/CD
 

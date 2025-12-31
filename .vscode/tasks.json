@@ -27,7 +27,7 @@
     {
       "label": "Dev: Backend (Express)",
       "type": "shell",
-      "command": "npm run server",
+      "command": "set -euo pipefail; PORT=3000 npm run server",
       "isBackground": true,
       "problemMatcher": []
     },
@@ -85,7 +85,7 @@
     {
       "label": "Dev: Stop Frontend (port 5173)",
       "type": "shell",
-      "command": "set -euo pipefail; pids=$(lsof -ti tcp:5173 || true); if [[ -n \"$pids\" ]]; then echo \"Killing Vite on :5173 ($pids)\"; kill $pids || true; fi",
+      "command": "set -euo pipefail; ports=(5173 5174); for port in ${ports[@]}; do pids=$(lsof -ti tcp:$port || true); if [[ -n \"$pids\" ]]; then echo \"Killing Vite on :$port ($pids)\"; kill $pids || true; fi; done",
       "problemMatcher": []
     },
     {
@@ -100,71 +100,6 @@
         "Dev: Start Backend (hot reload)",
         "Dev: Start Frontend (Vite)"
       ]
-    },
-    {
-      "label": "iOS: Monitor SwiftPM artifacts",
-      "type": "shell",
-      "command": "set -euo pipefail; cd /Users/yancyshepherd/Projects/crumb-recipe-pwa; echo 'Monitoring Xcode SwiftPM artifacts (Ctrl+C to stop)'; while true; do echo; date; node scripts/ios-spm-status.mjs || true; sleep 10; done",
-      "isBackground": true,
-      "problemMatcher": []
-    },
-    {
-      "label": "iOS: Repair SwiftPM + Build (sim)",
-      "type": "shell",
-      "command": "set -euo pipefail; cd /Users/yancyshepherd/Projects/crumb-recipe-pwa; npm run ios:spm:repair; xcodebuild -project ios/App/App.xcodeproj -scheme App -resolvePackageDependencies; xcodebuild -project ios/App/App.xcodeproj -scheme App -configuration Debug -destination 'platform=iOS Simulator,name=iPhone 14 Pro,OS=16.4' build",
-      "problemMatcher": []
-    },
-    {
-      "label": "Fastlane: Bundle Install",
-      "type": "shell",
-      "command": "set -euo pipefail; cd /Users/yancyshepherd/Projects/crumb-recipe-pwa; bundle install",
-      "problemMatcher": [],
-      "group": {
-        "kind": "build",
-        "isDefault": false
-      }
-    },
-    {
-      "label": "🧪 Fastlane: Tests",
-      "type": "shell",
-      "command": "set -euo pipefail; cd /Users/yancyshepherd/Projects/crumb-recipe-pwa; if command -v direnv >/dev/null 2>&1; then eval \"$(direnv export zsh)\"; fi; bundle exec fastlane tests",
-      "problemMatcher": [],
-      "group": {
-        "kind": "test",
-        "isDefault": false
-      }
-    },
-    {
-      "label": "📦 Fastlane: Beta Upload",
-      "type": "shell",
-      "command": "set -euo pipefail; cd /Users/yancyshepherd/Projects/crumb-recipe-pwa; if command -v direnv >/dev/null 2>&1; then eval \"$(direnv export zsh)\"; fi; bundle exec fastlane beta",
-      "problemMatcher": [],
-      "group": {
-        "kind": "build",
-        "isDefault": false
-      }
-    },
-    {
-      "label": "📦 Fastlane: Beta Upload (Wait)",
-      "type": "shell",
-      "command": "set -euo pipefail; cd /Users/yancyshepherd/Projects/crumb-recipe-pwa; if command -v direnv >/dev/null 2>&1; then eval \"$(direnv export zsh)\"; fi; WAIT_FOR_PROCESSING=1 bundle exec fastlane beta --verbose",
-      "problemMatcher": [],
-      "group": {
-        "kind": "build",
-        "isDefault": false
-      }
-    },
-    {
-      "label": "📊 Fastlane: TestFlight Status",
-      "type": "shell",
-      "command": "set -euo pipefail; cd /Users/yancyshepherd/Projects/crumb-recipe-pwa; if command -v direnv >/dev/null 2>&1; then eval \"$(direnv export zsh)\"; fi; bundle exec fastlane tf_status",
-      "problemMatcher": []
-    },
-    {
-      "label": "📊 Fastlane: List All TestFlight Builds",
-      "type": "shell",
-      "command": "set -euo pipefail; cd /Users/yancyshepherd/Projects/crumb-recipe-pwa; if command -v direnv >/dev/null 2>&1; then eval \"$(direnv export zsh)\"; fi; bundle exec fastlane tf_list_all",
-      "problemMatcher": []
     }
   ]
 }

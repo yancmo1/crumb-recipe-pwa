@@ -48,7 +48,7 @@ export async function showTimerNotification(opts: TimerNotificationOptions): Pro
   const title = opts.title || 'Timer done';
   const body = opts.body;
 
-  const icon = '/pwa-192x192.png';
+  const icon = '/crumbworks-192x192.png';
 
   const registration = await getServiceWorkerRegistrationSafe();
   if (registration?.showNotification) {

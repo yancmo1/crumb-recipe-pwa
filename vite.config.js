@@ -4,9 +4,9 @@ import { VitePWA } from 'vite-plugin-pwa';
 import path from 'path';
 export default defineConfig(function () {
     // NOTE: Avoid adding query params to icon URLs.
-    // In Capacitor WKWebView, WebKit can emit noisy privacy warnings like:
+    // In some WebKit environments, the browser can emit noisy privacy warnings like:
     //   "Unable to hide query parameters from script (missing data)"
-    // and query-string icons aren't needed for native builds anyway.
+    // and query-string icons aren't needed anyway.
     // (Service worker updates already handle cache invalidation for web.)
     return {
         plugins: [
@@ -26,33 +26,39 @@ export default defineConfig(function () {
                     'apple-touch-icon-152x152.png',
                     'apple-touch-icon-167x167.png',
                     'apple-touch-icon-180x180.png',
+                    'crumbworks-1024x1024.png',
                 ],
                 manifest: {
-                    name: 'Crumb - Recipe Manager',
-                    short_name: 'Crumb',
-                    description: 'Offline-friendly recipe PWA for home cooks',
-                    theme_color: '#7C8FB2',
-                    background_color: '#F2EFEA',
+                    name: 'CrumbWorks',
+                    short_name: 'CrumbWorks',
+                    description: 'Offline-friendly recipe and timer vault for home cooks and family sharing',
+                    theme_color: '#162841',
+                    background_color: '#F7F3EE',
                     display: 'standalone',
                     orientation: 'portrait',
                     start_url: '/',
                     scope: '/',
                     icons: [
                         {
-                            src: 'pwa-192x192.png',
+                            src: 'crumbworks-192x192.png',
                             sizes: '192x192',
                             type: 'image/png',
                         },
                         {
-                            src: 'pwa-512x512.png',
+                            src: 'crumbworks-512x512.png',
                             sizes: '512x512',
                             type: 'image/png',
                         },
                         {
-                            src: 'pwa-512x512.png',
+                            src: 'crumbworks-512x512.png',
                             sizes: '512x512',
                             type: 'image/png',
                             purpose: 'any maskable',
+                        },
+                        {
+                            src: 'crumbworks-1024x1024.png',
+                            sizes: '1024x1024',
+                            type: 'image/png',
                         },
                     ],
                 },

@@ -2,9 +2,7 @@
 	"folders": [
 		{
 			"path": "."
-		},
-		{
-			"path": "../~Artwork for apps/iOS Apps/CrumbWorks"
 		}
-	]
+	],
+	"settings": {}
 }
