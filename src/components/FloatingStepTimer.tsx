@@ -206,7 +206,7 @@ export function FloatingStepTimer({
             aria-label="Open timer"
             title="Open timer"
           >
-            <Timer className={`h-5 w-5 ${state.isRunning ? 'text-sage' : 'text-gray-600'}`} />
+            <Timer className={`h-5 w-5 ${state.isRunning ? 'text-rvAccent' : 'text-gray-600'}`} />
             <span className="mt-0.5 text-[11px] font-mono tabular-nums text-gray-900">
               {bubbleLabel}
             </span>
@@ -359,7 +359,7 @@ export function FloatingStepTimer({
                   </span>
                 </div>
                 {state.isRunning && (
-                  <span className="text-[11px] text-sage font-medium">running</span>
+                  <span className="text-[11px] text-rvAccent font-medium">running</span>
                 )}
               </div>
             </div>
@@ -507,7 +507,7 @@ function DurationEditor({
               onSave(parsed.seconds);
             }}
             disabled={!parsed.ok}
-            className="flex-1 h-11 rounded-lg bg-blueberry text-white hover:bg-blueberry/90 disabled:opacity-50 disabled:hover:bg-blueberry"
+            className="flex-1 h-11 rounded-lg rv-cta-gradient text-white hover:opacity-95 disabled:opacity-50"
           >
             Save
           </button>

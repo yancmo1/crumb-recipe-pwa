@@ -4,7 +4,7 @@ import { Link2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useRecipeStore } from '../state/session';
 import { db } from '../db';
-import { RvHeader } from '../components/RvHeader';
+import { RvLayout } from '../components/RvLayout';
 import { normalizeRecipeUrl } from '../utils/url';
 
 export default function ImportRecipe() {
@@ -42,10 +42,8 @@ export default function ImportRecipe() {
   };
 
   return (
-    <div className="min-h-screen bg-rvPageBg">
-      <RvHeader title="Import" showBackArrow onBack={() => navigate(-1)} />
-
-      <div className="max-w-md md:max-w-3xl lg:max-w-5xl mx-auto px-6 py-5">
+    <RvLayout title="Import">
+      <div className="max-w-[1200px] mx-auto px-4 md:px-6 py-5">
         <div className="bg-white rounded-xl shadow-rv-card p-5">
           <div className="flex items-center space-x-2 mb-4">
             <Link2 className="h-5 w-5 text-rvOrange" />
@@ -97,6 +95,6 @@ export default function ImportRecipe() {
           </div>
         </div>
       </div>
-    </div>
+    </RvLayout>
   );
 }

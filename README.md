@@ -1,4 +1,4 @@
-# Crumb - Offline Recipe PWA
+# CrumbWorks - Offline Recipe PWA
 
 A mobile-first Progressive Web App for managing and cooking from recipes offline. Built with React, TypeScript, and designed specifically for home cooks.
 

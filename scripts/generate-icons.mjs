@@ -56,8 +56,8 @@ async function run() {
 
   const outputs = [
     // PWA manifest icons
-    { file: 'pwa-192x192.png', size: 192 },
-    { file: 'pwa-512x512.png', size: 512 },
+    { file: 'crumbworks-192x192.png', size: 192 },
+    { file: 'crumbworks-512x512.png', size: 512 },
 
     // Apple touch icons
     { file: 'apple-touch-icon.png', size: 180 },

@@ -3,14 +3,14 @@
   <head>
     <meta charset="UTF-8" />
 
-    <meta name="crumb-asset-version" content="%VITE_ASSET_VERSION%" />
+    <meta name="crumbworks-asset-version" content="%VITE_ASSET_VERSION%" />
 
     <script>
       // Capture errors that happen before the module bundle loads.
       // This helps diagnose startup errors that may occur very early.
       (function () {
         try {
-          window.__CRUMB_BOOT_TS__ = Date.now();
+          window.__CRUMBWORKS_BOOT_TS__ = Date.now();
           console.log('[pre-main] boot', {
             assetVersion: '%VITE_ASSET_VERSION%',
             href: String(window.location && window.location.href),
@@ -30,7 +30,7 @@
                   stack: err && err.stack,
                   href: String(window.location && window.location.href),
                   readyState: document && document.readyState,
-                  sinceBootMs: Date.now() - window.__CRUMB_BOOT_TS__,
+                  sinceBootMs: Date.now() - window.__CRUMBWORKS_BOOT_TS__,
                 });
               } catch (inner) {
                 console.error('[pre-main][window.error] (failed to serialize)', inner);
@@ -51,7 +51,7 @@
                       : reason,
                   href: String(window.location && window.location.href),
                   readyState: document && document.readyState,
-                  sinceBootMs: Date.now() - window.__CRUMB_BOOT_TS__,
+                  sinceBootMs: Date.now() - window.__CRUMBWORKS_BOOT_TS__,
                 });
               } catch (inner) {
                 console.error('[pre-main][unhandledrejection] (failed to serialize)', inner);
@@ -69,9 +69,9 @@
     <!-- Viewport + safe areas (for notched devices) -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     
-    <!-- PWA Meta Tags -->
-    <meta name="theme-color" content="#7C8FB2" />
-    <meta name="description" content="Offline-friendly recipe PWA for home cooks" />
+    <!-- PWA Meta Tags - theme-color uses header gradient top #CB3002 -->
+    <meta name="theme-color" content="#CB3002" />
+    <meta name="description" content="Offline-friendly recipe and timer vault for home cooks and family sharing" />
     
     <!-- PWA Meta Tags -->
     <meta name="mobile-web-app-capable" content="yes" />
@@ -79,7 +79,7 @@
     <!-- Safari PWA Meta Tags (Apple-specific) -->
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-    <meta name="apple-mobile-web-app-title" content="Crumb" />
+    <meta name="apple-mobile-web-app-title" content="CrumbWorks" />
     
     <!-- Apple Touch Icons -->
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
@@ -96,7 +96,7 @@
     <link rel="apple-touch-startup-image" href="/splash-750x1334.png" media="(device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2)" />
     <link rel="apple-touch-startup-image" href="/splash-1125x2436.png" media="(device-width: 375px) and (device-height: 812px) and (-webkit-device-pixel-ratio: 3)" />
     
-    <title>Crumb - Recipe Manager</title>
+    <title>CrumbWorks</title>
   </head>
   <body>
     <div id="root"></div>

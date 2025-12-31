@@ -13,21 +13,26 @@ const menuItems = [
 ];
 
 /**
- * Recipe Vault Navigation Drawer / Sidebar (deterministic per spec §14)
- * - Mobile (<768px): slide-in 280px
- * - Tablet+ (>=768px): fixed sidebar 320px
- * - Background: #2C3E50
- * - Active item: 6px left bar #F7D774, background rgba(247,215,116,0.12)
- * - Text: white, SemiBold 18pt → text-lg font-semibold
+ * CrumbWorks Mobile Navigation Drawer (LOCKED palette)
+ * 
+ * MOBILE ONLY (<768px): Slide-in drawer triggered by hamburger.
+ * On tablet+ (>=768px), navigation is via the horizontal RvNavStrip.
+ * 
+ * LAYOUT RULES:
+ * - Width: 280px
+ * - Background: #162841 (rvBlue)
+ * - Active item: 6px left bar #E77320 (rvAccent), background rgba(231,115,32,0.12)
+ * - Text: white, font-semibold, text-lg (18px)
  */
 export function RvDrawer({ open, onClose }: Props) {
   const location = useLocation();
 
-  const isActive = (path: string) => location.pathname === path || location.pathname.startsWith(path + '/');
+  const isActive = (path: string) =>
+    location.pathname === path || location.pathname.startsWith(path + '/');
 
   return (
     <>
-      {/* Overlay (mobile only, tablet sidebar is always visible) */}
+      {/* Overlay (mobile only) */}
       {open && (
         <button
           aria-label="Close navigation"
@@ -36,29 +41,26 @@ export function RvDrawer({ open, onClose }: Props) {
         />
       )}
 
-      {/* Drawer / Sidebar */}
+      {/* Drawer — mobile only, 280px slide-in from left */}
       <aside
         className={[
           'fixed top-0 left-0 h-full bg-rvBlue text-white z-50',
-          // Mobile: slide-in 280px
           'w-[280px] transform transition-transform duration-300 ease-out',
           open ? 'translate-x-0' : '-translate-x-full',
-          // Tablet+: fixed 320px, always visible, no translate
-          'md:w-[320px] md:translate-x-0 md:static md:z-auto',
+          'md:hidden', // Hide entirely on tablet+ (nav is via RvNavStrip)
+          'pt-[env(safe-area-inset-top,0px)]',
         ].join(' ')}
-        style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}
         role="dialog"
         aria-modal="true"
         aria-label="Main navigation"
       >
         {/* Header row */}
         <div className="flex items-center justify-between px-4 py-4 border-b border-white/10">
-          <h2 className="text-lg font-semibold">Recipe Vault</h2>
-          {/* Close button only visible on mobile */}
+          <h2 className="text-lg font-semibold">CrumbWorks</h2>
           <button
             aria-label="Close navigation"
             onClick={onClose}
-            className="p-2 text-white/80 hover:text-white md:hidden"
+            className="p-2 text-white/80 hover:text-white"
           >
             <X className="h-5 w-5" />
           </button>
@@ -76,13 +78,13 @@ export function RvDrawer({ open, onClose }: Props) {
                 className={[
                   'relative flex items-center px-4 py-4 text-lg font-semibold',
                   active
-                    ? 'bg-[rgba(247,215,116,0.12)]'
+                    ? 'bg-[rgba(231,115,32,0.12)]'
                     : 'hover:bg-white/10 focus-visible:bg-white/10',
                 ].join(' ')}
               >
-                {/* Active indicator bar */}
+                {/* Active indicator bar — uses rvAccent #E77320 */}
                 {active && (
-                  <span className="absolute left-0 top-0 bottom-0 w-[6px] bg-rvYellow rounded-r" />
+                  <span className="absolute left-0 top-0 bottom-0 w-[6px] bg-rvAccent rounded-r" />
                 )}
                 {item.label}
               </Link>

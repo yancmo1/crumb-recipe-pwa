@@ -1,6 +1,6 @@
 
 
-# Server Instructions — Recipe Vault (Express + Postgres)
+# Server Instructions — CrumbWorks (Express + Postgres)
 
 These rules apply to backend/API work in `server/`.
 

@@ -1,13 +1,11 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { Download, Upload, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useSettings, useRecipeStore } from '../state/session';
 import { db } from '../db';
-import { RvHeader } from '../components/RvHeader';
+import { RvLayout } from '../components/RvLayout';
 
 export default function Settings() {
-  const navigate = useNavigate();
   const {
     theme,
     setTheme,
@@ -40,7 +38,7 @@ export default function Settings() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `crumb-recipes-${new Date().toISOString().split('T')[0]}.json`;
+      a.download = `crumbworks-recipes-${new Date().toISOString().split('T')[0]}.json`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -126,10 +124,8 @@ export default function Settings() {
   };
 
   return (
-    <div className="min-h-screen bg-rvPageBg">
-      <RvHeader title="Settings" showBackArrow onBack={() => navigate('/')} />
-
-      <div className="max-w-md md:max-w-3xl lg:max-w-5xl mx-auto px-6 py-5 space-y-5">
+    <RvLayout title="Settings">
+      <div className="max-w-[1200px] mx-auto px-4 md:px-6 py-5 space-y-5">
         {/* Theme Settings */}
         <div className="bg-white rounded-xl shadow-rv-card p-5">
           <h2 className="text-lg font-semibold text-rvGray mb-4">Appearance</h2>
@@ -164,7 +160,7 @@ export default function Settings() {
                 type="checkbox"
                 checked={preferGrams}
                 onChange={(e) => setPreferGrams(e.target.checked)}
-                className="w-5 h-5 text-blueberry rounded focus:ring-blueberry"
+                className="w-5 h-5 accent-rvAccent rounded focus:ring-rvAccent"
               />
             </label>
           </div>
@@ -183,7 +179,7 @@ export default function Settings() {
               value={syncKey}
               onChange={(e) => setSyncKey(e.target.value)}
               placeholder="e.g., family-kitchen"
-              className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blueberry focus:border-transparent"
+              className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-rvAccent focus:border-transparent"
             />
           </label>
 
@@ -198,7 +194,7 @@ export default function Settings() {
                 autoCapitalize="none"
                 autoCorrect="off"
                 spellCheck={false}
-                className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blueberry focus:border-transparent"
+                className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-rvAccent focus:border-transparent"
               />
             </label>
             <p className="mt-2 text-sm text-gray-500">
@@ -221,14 +217,14 @@ export default function Settings() {
                 value={overrideIngredientKey}
                 onChange={(e) => setOverrideIngredientKey(e.target.value)}
                 placeholder="Ingredient (e.g., bread flour)"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blueberry focus:border-transparent"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-rvAccent focus:border-transparent"
               />
               <div className="grid grid-cols-3 gap-2">
                 <input
                   value={overrideUnit}
                   onChange={(e) => setOverrideUnit(e.target.value)}
                   placeholder="Unit (cup)"
-                  className="col-span-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blueberry focus:border-transparent"
+                  className="col-span-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-rvAccent focus:border-transparent"
                 />
                 <input
                   value={overrideGramsPerUnit}
@@ -238,13 +234,13 @@ export default function Settings() {
                   inputMode="decimal"
                   min="0"
                   step="0.1"
-                  className="col-span-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blueberry focus:border-transparent"
+                  className="col-span-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-rvAccent focus:border-transparent"
                 />
                 <button
                   type="button"
                   onClick={handleAddOverride}
                   disabled={!overrideIngredientKey.trim() || !overrideUnit.trim() || !overrideGramsPerUnit.trim()}
-                  className="col-span-1 px-3 py-2 bg-blueberry text-white rounded-lg hover:bg-blueberry/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  className="col-span-1 px-3 py-2 rv-cta-gradient text-white rounded-lg hover:opacity-95 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity"
                 >
                   Add
                 </button>
@@ -302,7 +298,7 @@ export default function Settings() {
                 type="checkbox"
                 checked={keepSessionsOnClose}
                 onChange={(e) => setKeepSessionsOnClose(e.target.checked)}
-                className="w-5 h-5 text-blueberry rounded focus:ring-blueberry"
+                className="w-5 h-5 accent-rvAccent rounded focus:ring-rvAccent"
               />
             </label>
           </div>
@@ -321,7 +317,7 @@ export default function Settings() {
               <button
                 onClick={handleExportData}
                 disabled={isExporting || recipes.length === 0}
-                className="flex items-center space-x-2 px-4 py-2 bg-blueberry text-white rounded-lg hover:bg-blueberry/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="flex items-center space-x-2 px-4 py-2 rv-cta-gradient text-white rounded-lg hover:opacity-95 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity"
               >
                 {isExporting ? (
                   <>
@@ -342,7 +338,7 @@ export default function Settings() {
                 <span className="text-rvGray">Import Recipes</span>
                 <p className="text-sm text-gray-500">Upload recipes from JSON file</p>
               </div>
-              <label className="flex items-center space-x-2 px-4 py-2 bg-sage text-white rounded-lg hover:bg-sage/90 cursor-pointer transition-colors">
+              <label className="flex items-center space-x-2 px-4 py-2 bg-rvBlue text-white rounded-lg hover:bg-rvBlue/90 cursor-pointer transition-colors">
                 {isImporting ? (
                   <>
                     <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
@@ -406,6 +402,6 @@ export default function Settings() {
           </div>
         </div>
       </div>
-    </div>
+    </RvLayout>
   );
 }

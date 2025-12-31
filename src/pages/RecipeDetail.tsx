@@ -6,7 +6,7 @@ import { useRecipeStore, useCookSession, useSettings } from '../state/session';
 import { scaleIngredients, formatFraction, getMultiplierOptions, getIngredientDisplayAmount } from '../utils/scale';
 import { isConvertibleToGrams } from '../utils/conversions';
 import { FloatingStepTimer } from '../components/FloatingStepTimer';
-import { RvHeader } from '../components/RvHeader';
+import { RvLayout } from '../components/RvLayout';
 import type { Recipe } from '../types';
 
 export default function RecipeDetail() {
@@ -91,12 +91,14 @@ export default function RecipeDetail() {
 
   if (!recipe) {
     return (
-      <div className="min-h-screen bg-oatmeal flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-8 h-8 border-2 border-blueberry border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading recipe...</p>
+      <RvLayout title="Loading...">
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center">
+            <div className="w-8 h-8 border-2 border-rvAccent border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+            <p className="text-gray-600">Loading recipe...</p>
+          </div>
         </div>
-      </div>
+      </RvLayout>
     );
   }
 
@@ -321,43 +323,39 @@ export default function RecipeDetail() {
   };
 
   return (
-    <div className="min-h-screen bg-rvPageBg">
-      <RvHeader
-        title={recipe?.title || 'Recipe'}
-        showBackArrow
-        onBack={() => navigate('/library')}
-        rightSlot={
-          recipe ? (
-            <div className="flex items-center gap-1">
-              <button
-                onClick={handleToggleFavorite}
-                className={
-                  recipe.isFavorite
-                    ? 'text-rvYellow p-2'
-                    : 'text-white/70 hover:text-white p-2'
-                }
-                title={recipe.isFavorite ? 'Unfavorite' : 'Favorite'}
-                aria-label={recipe.isFavorite ? 'Unfavorite recipe' : 'Favorite recipe'}
-              >
-                <Star className="h-5 w-5" fill={recipe.isFavorite ? 'currentColor' : 'none'} />
-              </button>
-              <button
-                onClick={handleDelete}
-                className="text-white/70 hover:text-red-300 p-2"
-                title="Delete recipe"
-                aria-label="Delete recipe"
-              >
-                <Trash2 className="h-5 w-5" />
-              </button>
-            </div>
-          ) : undefined
-        }
-      />
-
+    <RvLayout
+      title={recipe?.title || 'Recipe'}
+      rightSlot={
+        recipe ? (
+          <div className="flex items-center gap-1">
+            <button
+              onClick={handleToggleFavorite}
+              className={
+                recipe.isFavorite
+                  ? 'text-rvYellow p-2'
+                  : 'text-white/70 hover:text-white p-2'
+              }
+              title={recipe.isFavorite ? 'Unfavorite' : 'Favorite'}
+              aria-label={recipe.isFavorite ? 'Unfavorite recipe' : 'Favorite recipe'}
+            >
+              <Star className="h-5 w-5" fill={recipe.isFavorite ? 'currentColor' : 'none'} />
+            </button>
+            <button
+              onClick={handleDelete}
+              className="text-white/70 hover:text-red-300 p-2"
+              title="Delete recipe"
+              aria-label="Delete recipe"
+            >
+              <Trash2 className="h-5 w-5" />
+            </button>
+          </div>
+        ) : undefined
+      }
+    >
       {/* Session Status */}
       {currentSession && timeRemaining > 0 && (
-        <div className="bg-sage text-white p-3 no-print">
-          <div className="max-w-md md:max-w-4xl lg:max-w-6xl mx-auto px-4 flex items-center justify-between">
+        <div className="bg-rvBlue text-white p-3 no-print">
+          <div className="max-w-[1200px] mx-auto px-4 flex items-center justify-between">
             <span className="text-sm">
               Session expires in {hoursRemaining}h {minutesRemaining}m
             </span>
@@ -371,7 +369,7 @@ export default function RecipeDetail() {
         </div>
       )}
 
-      <div className="max-w-md md:max-w-4xl lg:max-w-6xl mx-auto px-4 py-5 space-y-5">
+      <div className="max-w-[1200px] mx-auto px-4 md:px-6 py-5 space-y-5">
         {/* Recipe Info */}
         <div className="bg-white rounded-xl shadow-rv-card p-5 recipe-content">
           {/* Recipe Image with Upload Option */}
@@ -458,7 +456,7 @@ export default function RecipeDetail() {
                 id="recipe-category"
                 value={(recipe.category || '').trim()}
                 onChange={(e) => handleSetCategory(e.target.value)}
-                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blueberry focus:border-transparent bg-white text-gray-900"
+                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-rvAccent focus:border-transparent bg-white text-gray-900"
               >
                 <option value="">Uncategorized</option>
                 {availableCategories.map((cat) => (
@@ -491,7 +489,7 @@ export default function RecipeDetail() {
                 href={recipe.sourceUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 text-blueberry hover:underline"
+                className="inline-flex items-center gap-1 text-rvAccent hover:underline"
                 title="Open the original recipe page"
               >
                 <ExternalLink className="h-4 w-4" />
@@ -526,7 +524,7 @@ export default function RecipeDetail() {
                 onClick={() => setPreferGrams(!preferGrams)}
                 className={`flex items-center space-x-1 px-2 py-1 rounded text-sm font-medium transition-colors ${
                   showGrams 
-                    ? 'bg-sage text-white' 
+                    ? 'bg-rvAccent text-white' 
                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}
                 title="Convert to grams"
@@ -547,7 +545,7 @@ export default function RecipeDetail() {
                 value={multiplier.toString()}
                 onChange={(e) => handleMultiplierChange(e.target.value)}
                 aria-label="Scale multiplier"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blueberry focus:border-transparent bg-white text-gray-900"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-rvAccent focus:border-transparent bg-white text-gray-900"
               >
                 {getMultiplierOptions().map(({ value, label }) => (
                   <option key={value} value={value.toString()}>
@@ -579,12 +577,12 @@ export default function RecipeDetail() {
                   max="10"
                   value={customMultiplier}
                   onChange={(e) => setCustomMultiplier(e.target.value)}
-                  className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blueberry focus:border-transparent"
+                  className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-rvAccent focus:border-transparent"
                   placeholder="e.g., 1.5"
                 />
                 <button
                   onClick={handleCustomMultiplier}
-                  className="px-4 py-2 bg-blueberry text-white rounded-lg hover:bg-blueberry/90 transition-colors"
+                  className="px-4 py-2 rv-cta-gradient text-white rounded-lg hover:opacity-95 transition-opacity"
                 >
                   Apply
                 </button>
@@ -613,7 +611,7 @@ export default function RecipeDetail() {
                   <span>Scaled by {formatFraction(multiplier)}×</span>
                 )}
                 {showGrams && (
-                  <span className="bg-sage text-white px-2 py-1 rounded text-xs">
+                  <span className="bg-rvAccent text-white px-2 py-1 rounded text-xs">
                     Grams
                   </span>
                 )}
@@ -646,7 +644,7 @@ export default function RecipeDetail() {
                         onClick={() => toggleIngredient(index)}
                         className={`mt-1 w-5 h-5 rounded border-2 flex-shrink-0 no-print ${
                           currentSession.checkedIngredients[index]
-                            ? 'bg-sage border-sage'
+                            ? 'bg-rvAccent border-rvAccent'
                             : 'border-gray-300'
                         }`}
                       >
@@ -719,7 +717,7 @@ export default function RecipeDetail() {
                         onClick={() => toggleStep(index)}
                         className={`mt-1 w-6 h-6 rounded-full border-2 flex-shrink-0 no-print ${
                           currentSession.checkedSteps[index]
-                            ? 'bg-sage border-sage'
+                            ? 'bg-rvAccent border-rvAccent'
                             : 'border-gray-300'
                         }`}
                       >
@@ -730,7 +728,7 @@ export default function RecipeDetail() {
                         )}
                       </button>
                     ) : (
-                      <span className="mt-1 w-6 h-6 rounded-full bg-blueberry text-white text-sm flex items-center justify-center flex-shrink-0">
+                      <span className="mt-1 w-6 h-6 rounded-full bg-rvAccent text-white text-sm flex items-center justify-center flex-shrink-0">
                         {index + 1}
                       </span>
                     )}
@@ -839,7 +837,7 @@ export default function RecipeDetail() {
             {!isEditingNotes ? (
               <button
                 onClick={() => setIsEditingNotes(true)}
-                className="text-blueberry hover:text-blueberry/80 p-1"
+                className="text-rvAccent hover:text-rvAccent/80 p-1"
                 title="Edit notes"
               >
                 <Edit3 size={20} />
@@ -872,7 +870,7 @@ export default function RecipeDetail() {
               value={notesText}
               onChange={(e) => setNotesText(e.target.value)}
               placeholder="Add your personal notes about this recipe..."
-              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blueberry/20 focus:border-blueberry resize-none"
+              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-rvAccent/20 focus:border-rvAccent resize-none"
               rows={4}
               autoFocus
             />
@@ -888,7 +886,7 @@ export default function RecipeDetail() {
 
       {/* Sticky Action Bar */}
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 no-print safe-bottom">
-        <div className="max-w-md md:max-w-4xl lg:max-w-6xl mx-auto flex justify-center space-x-4">
+        <div className="max-w-[1200px] mx-auto flex justify-center space-x-4">
           {!currentSession ? (
             <button
               onClick={handleStartSession}
@@ -919,6 +917,6 @@ export default function RecipeDetail() {
 
       {/* Bottom padding for sticky bar */}
       <div className="h-20 no-print"></div>
-    </div>
+    </RvLayout>
   );
 }

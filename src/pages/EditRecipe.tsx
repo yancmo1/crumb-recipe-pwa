@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { RvHeader } from '../components/RvHeader';
+import { RvLayout } from '../components/RvLayout';
 import { useRecipeStore } from '../state/session';
 import type { Recipe, IngredientToken } from '../types';
 import { toast } from 'sonner';
@@ -33,7 +33,7 @@ export default function EditRecipe() {
     if (!id) return;
     const found = recipes.find((r) => r.id === id);
     if (!found) {
-      navigate('/');
+      navigate('/library', { replace: true });
       return;
     }
     setRecipe(found);
@@ -69,10 +69,8 @@ export default function EditRecipe() {
   }
 
   return (
-    <div className="min-h-screen bg-rvPageBg">
-      <RvHeader title="Edit Recipe" showBackArrow onBack={() => navigate(`/recipe/${recipe.id}`)} />
-
-      <div className="max-w-md md:max-w-4xl lg:max-w-6xl mx-auto px-6 py-5 space-y-5">
+    <RvLayout title="Edit Recipe">
+      <div className="max-w-[1200px] mx-auto px-4 md:px-6 py-5 space-y-5">
         <div className="bg-white rounded-xl shadow-rv-card p-5">
           <label className="block text-sm font-medium text-rvGray mb-1">Recipe Name</label>
           <input
@@ -128,6 +126,6 @@ export default function EditRecipe() {
         </div>
       </div>
       <div className="h-20 no-print" />
-    </div>
+    </RvLayout>
   );
 }

@@ -1,6 +1,6 @@
 
 
-# PWA Instructions — Recipe Vault
+# PWA Instructions — CrumbWorks
 
 These instructions apply to PWA installability, offline behavior, caching, and cross-device browser compatibility (mobile/tablet Safari + desktop browsers).
 

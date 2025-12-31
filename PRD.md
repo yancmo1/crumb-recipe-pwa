@@ -1046,7 +1046,7 @@ curl http://localhost:5554/health
 
 ### 6.1 Design System
 
-**Recipe Vault Brand Palette:**
+**CrumbWorks Brand Palette:**
 - **Sunset Orange (Primary Actions):** `#FD5E53`
 - **Slate Blue (App Chrome/Vault Accents):** `#2C3E50`
 - **Structural Dark Gray (Text/Containers):** `#4A4A4A`
@@ -1116,7 +1116,7 @@ Gradients: subtle, smooth; used in header zones and vault accents.
 
 ---
 
-## 6.4 UI/UX Redesign Compliance (Recipe Vault)
+## 6.4 UI/UX Redesign Compliance (CrumbWorks)
 
 Implemented screens and changes to meet the PRD:
 

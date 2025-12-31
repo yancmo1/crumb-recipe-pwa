@@ -11,8 +11,8 @@ export function createSampleRecipe(nowMs: number = Date.now()): Recipe {
   return {
     id: createId(),
     title: 'Skillet Toast (Sample)',
-    sourceUrl: 'https://crumb.app/sample/skillet-toast',
-    sourceName: 'Crumb Sample',
+    sourceUrl: 'https://crumbworks.app/sample/skillet-toast',
+    sourceName: 'CrumbWorks Sample',
     category: 'Breakfast',
     yield: '1 toast',
     times: { prep: 1, cook: 6, total: 7 },

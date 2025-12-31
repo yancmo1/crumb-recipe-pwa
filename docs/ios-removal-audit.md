@@ -76,9 +76,9 @@ Removed native-app roadmap items:
 
 Reworded iOS-specific headings/notes:
 
-- `**Recipe Vault Brand Palette (iOS UI/UX Refactor):**`
+- `**CrumbWorks Brand Palette (iOS UI/UX Refactor):**`
 - `-**iOS Safari Optimizations:**`
-- `-## 6.4 iOS UI/UX Redesign Compliance (Recipe Vault)`
+- `-## 6.4 iOS UI/UX Redesign Compliance (CrumbWorks)`
 - `- **Font Family:** System font stack (San Francisco on iOS, Roboto on Android)`
 - `- ✅ PWA installable on iOS/Android`
 
@@ -119,6 +119,10 @@ Removed iOS-specific language in mask guidance:
 - `Full-bleed background; artwork kept within safe padding so iOS/Android masks don't crop the bread.`
 
 ## Verification
+
+- Platform: React + Vite PWA only
+- Notifications: Web Push (client subscription + server-scheduled delivery)
+- UI Palette remains locked per: `.github/instructions/UI-Cannon-and-style-guide.md`
 
 Tracked-file scan for iOS-native and native-wrapper terms:
 

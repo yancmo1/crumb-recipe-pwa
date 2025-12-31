@@ -45,7 +45,7 @@ export function NavDrawer() {
         aria-label="Main navigation"
       >
         <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
-          <h2 className="text-lg font-semibold">Recipe Vault</h2>
+          <h2 className="text-lg font-semibold">CrumbWorks</h2>
           <button
             aria-label="Close navigation"
             onClick={() => setOpen(false)}

@@ -1,5 +1,5 @@
-import { useEffect, useRef, lazy, Suspense } from 'react';
-import { Routes, Route } from 'react-router-dom';
+import { useEffect, useRef, useState, lazy, Suspense } from 'react';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster, toast } from 'sonner';
 import { useRecipeStore } from './state/session';
 import Library from './pages/Library';
@@ -7,10 +7,12 @@ const ImportRecipe = lazy(() => import('./pages/ImportRecipe'));
 const RecipeDetail = lazy(() => import('./pages/RecipeDetail'));
 const Settings = lazy(() => import('./pages/Settings'));
 const About = lazy(() => import('./pages/About'));
+const StyleGuide = lazy(() => import('./pages/StyleGuide'));
 import Home from './pages/Home';
 const EditRecipe = lazy(() => import('./pages/EditRecipe'));
 import { registerSW } from 'virtual:pwa-register';
-import { isNativePlatform } from './utils/nativeLocalNotifications';
+import { isNativePlatform } from './utils/nativeLocalNotifications.ts';
+import { getHasSeenWelcome } from './utils/welcome';
 
 // Register service worker
 let updateSW: ((reloadPage?: boolean) => Promise<void>) | undefined;
@@ -25,7 +27,7 @@ if ('serviceWorker' in navigator && !isNativePlatform()) {
       updateToastShown = true;
 
       toast('Update available', {
-        description: 'A newer version of Crumb is ready. Reload to apply it.',
+        description: 'A newer version of CrumbWorks is ready. Reload to apply it.',
         duration: Infinity,
         action: {
           label: 'Reload',
@@ -60,6 +62,21 @@ if ('serviceWorker' in navigator && !isNativePlatform()) {
 function App() {
   const loadRecipes = useRecipeStore((state) => state.loadRecipes);
   const didInitialLoad = useRef(false);
+
+  const WelcomeGate = () => {
+    const [hasSeen, setHasSeen] = useState<boolean | null>(null);
+
+    useEffect(() => {
+      setHasSeen(getHasSeenWelcome());
+    }, []);
+
+    if (hasSeen === null) {
+      // Keep initial paint quiet; this resolves immediately in practice.
+      return null;
+    }
+
+    return hasSeen ? <Navigate to="/library" replace /> : <Home />;
+  };
 
   useEffect(() => {
     // In React 18 StrictMode (dev), effects run twice.
@@ -116,14 +133,15 @@ function App() {
     <div className="min-h-screen bg-background">
       <Suspense fallback={<div className="p-6 text-center text-gray-600">Loading…</div>}>
         <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/home" element={<Home />} />
+        <Route path="/" element={<WelcomeGate />} />
+        <Route path="/home" element={<WelcomeGate />} />
         <Route path="/library" element={<Library />} />
         <Route path="/import" element={<ImportRecipe />} />
         <Route path="/recipe/:id" element={<RecipeDetail />} />
         <Route path="/recipe/:id/edit" element={<EditRecipe />} />
         <Route path="/settings" element={<Settings />} />
           <Route path="/about" element={<About />} />
+          <Route path="/styleguide" element={<StyleGuide />} />
         </Routes>
       </Suspense>
       <Toaster 

@@ -1,4 +1,4 @@
-# Testing Checklist - Crumb Recipe Scraper Improvements
+# Testing Checklist - CrumbWorks Recipe Scraper Improvements
 
 ## 🎯 Quick Test (5 minutes)
 

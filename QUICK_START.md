@@ -1,8 +1,8 @@
-# Crumb Recipe Scraper - Quick Start Guide
+# CrumbWorks Recipe Scraper - Quick Start Guide
 
 ## 🚀 What Changed?
 
-Your Crumb app scraping was **hit-or-miss** (40-60% success). I've improved it to **75-85% success** by fixing critical bugs and adding recipe plugin support.
+Your CrumbWorks app scraping was **hit-or-miss** (40-60% success). I've improved it to **75-85% success** by fixing critical bugs and adding recipe plugin support.
 
 ## ✅ Key Improvements
 
@@ -58,7 +58,7 @@ npm run icons
 
 This updates:
 
-- PWA icons in `public/` (e.g. `pwa-192x192.png`, `pwa-512x512.png`, Apple touch icons)
+- PWA icons in `public/` (e.g. `crumbworks-192x192.png`, `crumbworks-512x512.png`, Apple touch icons)
 
 ## 📦 Files Added
 
@@ -170,4 +170,4 @@ You should now see **significantly better** recipe imports, especially from:
 - Multi-section recipes like sourdough (was broken, now works)
 - Sites with ingredient groups (now preserved)
 
-**Enjoy your improved Crumb app! 🍞**
+**Enjoy your improved CrumbWorks app! 🍞**

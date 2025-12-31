@@ -61,32 +61,39 @@ body {
 }
 
 
-/* Recipe Vault brand: header gradient (top → bottom) §11.1 */
+/* CrumbWorks LOCKED brand gradients (from approved artwork — DO NOT modify) */
+
+/* Header bar gradient: #CB3002 → #F85F1E → #E77320 (top → bottom) */
 .rv-header-gradient {
-  background: linear-gradient(180deg, #FD5E53 0%, #F45A4F 50%, #C7443C 100%);
+  background: linear-gradient(180deg, #CB3002 0%, #F85F1E 50%, #E77320 100%);
 }
 
-/* CTA button gradient (left → right) */
+/* Primary CTA button gradient: #F85F1E → #CB3002 (left → right) */
 .rv-cta-gradient {
-  background: linear-gradient(90deg, #FD5E53 0%, #C7443C 100%);
+  background: linear-gradient(90deg, #F85F1E 0%, #CB3002 100%);
 }
 
-/* Hero radial glow behind vault art §13.1 */
+/* Hero radial glow behind vault art (uses accent orange) */
 .rv-hero-glow {
-  background: radial-gradient(circle at center, rgba(247,215,116,0.25) 0%, transparent 60%);
+  background: radial-gradient(circle at center, rgba(231,115,32,0.25) 0%, transparent 60%);
 }
 
-/* Thumbnail placeholder gradient when no image §15.3 */
+/* Thumbnail placeholder gradient when no image */
 .rv-thumb-placeholder {
-  background: linear-gradient(180deg, #FD5E53 0%, #F7D774 100%);
+  background: linear-gradient(180deg, #F85F1E 0%, #E77320 100%);
 }
 
-/* CTA button shadow §16.2 */
+/* CTA button shadow (subtle, no flat elevation) */
 .rv-cta-shadow {
-  box-shadow: 0 10px 24px rgba(0,0,0,0.25);
+  box-shadow: 0 4px 14px rgba(0,0,0,0.18);
 }
 
-/* Accessible focus ring defaults */
+/* Card subtle shadow (12px radius, 16px padding specified in components) */
+.rv-card-shadow {
+  box-shadow: 0 2px 8px rgba(0,0,0,0.10);
+}
+
+/* Accessible focus ring defaults — uses accent orange */
 button, a, input, select, textarea {
   outline: none;
 }
@@ -96,7 +103,7 @@ a:focus-visible,
 input:focus-visible,
 select:focus-visible,
 textarea:focus-visible {
-  box-shadow: 0 0 0 2px #FD5E53, 0 0 0 4px rgba(0,0,0,0.08);
+  box-shadow: 0 0 0 2px #E77320, 0 0 0 4px rgba(0,0,0,0.08);
   border-radius: 10px;
 }
 
