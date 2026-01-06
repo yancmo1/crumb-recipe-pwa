@@ -1,6 +1,107 @@
 {
   "version": "2.0.0",
+  "inputs": [
+    {
+      "id": "prNumber",
+      "type": "promptString",
+      "description": "PR number (e.g., 21)",
+      "default": ""
+    },
+    {
+      "id": "prTopic",
+      "type": "promptString",
+      "description": "Short PR topic (e.g., audio-session-gating)",
+      "default": ""
+    }
+  ],
   "tasks": [
+    {
+      "label": "🧾 PR Check: Copy Prompt",
+      "type": "shell",
+      "command": "bash",
+      "args": [
+        "scripts/pr-check/copy_pr_check_prompt.sh"
+      ],
+      "options": {
+        "env": {
+          "PR_NUMBER": "${input:prNumber}",
+          "SHORT_TOPIC": "${input:prTopic}"
+        }
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "🧾 PR Check: Copy Prompt (Edits)",
+      "type": "shell",
+      "command": "bash",
+      "args": [
+        "scripts/pr-check/copy_pr_check_prompt.sh"
+      ],
+      "options": {
+        "env": {
+          "PR_NUMBER": "${input:prNumber}",
+          "SHORT_TOPIC": "${input:prTopic} edits",
+          "TEMPLATE_PATH": ".vscode/pr_check_prompt_template_edits.md"
+        }
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "🛠️ PR Fix: Copy Implementation Prompt",
+      "type": "shell",
+      "command": "bash",
+      "args": [
+        "scripts/pr-check/copy_pr_fix_prompt.sh"
+      ],
+      "options": {
+        "env": {
+          "PR_NUMBER": "${input:prNumber}",
+          "SHORT_TOPIC": "${input:prTopic}",
+          "TEMPLATE_PATH": ".vscode/pr_fix_prompt_template.md"
+        }
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "📝 PR Reply: Create/Open Reply File",
+      "type": "shell",
+      "command": "bash",
+      "args": [
+        "scripts/pr-check/create_or_open_reply.sh"
+      ],
+      "options": {
+        "env": {
+          "PR_NUMBER": "${input:prNumber}",
+          "SHORT_TOPIC": "${input:prTopic}"
+        }
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "🧩 PR Handoff: Save Markdown from Clipboard",
+      "type": "shell",
+      "command": "bash",
+      "args": [
+        "scripts/pr-check/save_clipboard_markdown.sh"
+      ],
+      "options": {
+        "env": {
+          "PR_NUMBER": "${input:prNumber}",
+          "SHORT_TOPIC": "${input:prTopic}"
+        }
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "🧰 PR Check: Repair/Verify Install",
+      "type": "shell",
+      "command": "bash",
+      "args": [
+        "-lc",
+        "set -euo pipefail; test -f scripts/pr-check/copy_pr_check_prompt.sh; test -f .vscode/pr_check_prompt_template.md; test -f .vscode/pr_check_prompt_template_edits.md; test -f .vscode/pr_fix_prompt_template.md; echo 'PR Check tooling present.'"
+      ],
+      "problemMatcher": []
+    },
     {
       "label": "Git: Commit (auto message)",
       "type": "shell",
