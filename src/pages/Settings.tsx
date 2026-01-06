@@ -1,9 +1,13 @@
-import { useState } from 'react';
-import { Download, Upload, Trash2 } from 'lucide-react';
+import { useState, useRef } from 'react';
+import { Download, Upload, Trash2, User, UserPlus } from 'lucide-react';
 import { toast } from 'sonner';
 import { useSettings, useRecipeStore } from '../state/session';
-import { db } from '../db';
+import { getDb } from '../db';
 import { RvLayout } from '../components/RvLayout';
+import { listProfiles, getActiveProfile, createProfile, setActiveProfile, deleteProfile } from '../profile/profileManager';
+import { reinitializeForProfile } from '../initDatabase';
+import { exportSnapshot, importSnapshot, downloadSnapshot, parseSnapshotFile } from '../sharing/snapshot';
+import type { Profile } from '../types';
 
 export default function Settings() {
   const {
@@ -26,13 +30,145 @@ export default function Settings() {
   const [isImporting, setIsImporting] = useState(false);
   const [isClearingData, setIsClearingData] = useState(false);
 
+  // Profile management state
+  const [profiles, setProfiles] = useState<Profile[]>(listProfiles());
+  const [activeProfile, setActiveProfileState] = useState<Profile | null>(getActiveProfile());
+  const [newProfileLabel, setNewProfileLabel] = useState('');
+  const [isCreatingProfile, setIsCreatingProfile] = useState(false);
+  const [isSwitchingProfile, setIsSwitchingProfile] = useState(false);
+
+  // Snapshot import state
+  const [isImportingSnapshot, setIsImportingSnapshot] = useState(false);
+  const snapshotFileInputRef = useRef<HTMLInputElement>(null);
+
   const [overrideIngredientKey, setOverrideIngredientKey] = useState('');
   const [overrideUnit, setOverrideUnit] = useState('');
   const [overrideGramsPerUnit, setOverrideGramsPerUnit] = useState('');
 
+  const refreshProfiles = () => {
+    setProfiles(listProfiles());
+    setActiveProfileState(getActiveProfile());
+  };
+
+  const handleCreateProfile = async () => {
+    if (!newProfileLabel.trim()) {
+      toast.error('Please enter a profile name');
+      return;
+    }
+
+    setIsCreatingProfile(true);
+    try {
+      const uuid = typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+        ? crypto.randomUUID()
+        : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 15)}`;
+      const newId = `local:${uuid}`;
+      createProfile(newId, newProfileLabel.trim());
+      refreshProfiles();
+      setNewProfileLabel('');
+      toast.success(`Profile "${newProfileLabel}" created!`);
+    } catch (error) {
+      console.error('Failed to create profile:', error);
+      toast.error('Failed to create profile');
+    } finally {
+      setIsCreatingProfile(false);
+    }
+  };
+
+  const handleSwitchProfile = async (userId: string) => {
+    if (userId === activeProfile?.userId) {
+      return;
+    }
+
+    setIsSwitchingProfile(true);
+    try {
+      // Set active profile
+      setActiveProfile(userId);
+      
+      // Reinitialize database for new profile
+      await reinitializeForProfile(userId);
+      
+      // Reload recipes for new profile
+      await loadRecipes();
+      
+      refreshProfiles();
+      toast.success('Switched profile successfully!');
+      
+      // Reload page to ensure clean state
+      setTimeout(() => {
+        window.location.reload();
+      }, 500);
+    } catch (error) {
+      console.error('Failed to switch profile:', error);
+      toast.error('Failed to switch profile');
+      setIsSwitchingProfile(false);
+    }
+  };
+
+  const handleDeleteProfile = (userId: string) => {
+    const profile = profiles.find(p => p.userId === userId);
+    if (!profile) return;
+
+    if (!confirm(`Delete profile "${profile.label}"? This will NOT delete the profile's data, only remove it from the list.`)) {
+      return;
+    }
+
+    try {
+      deleteProfile(userId);
+      refreshProfiles();
+      toast.success(`Profile "${profile.label}" removed`);
+    } catch (error) {
+      console.error('Failed to delete profile:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to delete profile');
+    }
+  };
+
+  const handleExportSnapshot = async () => {
+    setIsExporting(true);
+    try {
+      const db = getDb();
+      const snapshot = await exportSnapshot(db.db, {
+        includeSessions: false,
+        userId: activeProfile?.userId
+      });
+      
+      downloadSnapshot(snapshot, `crumbworks-${activeProfile?.label || 'profile'}-${Date.now()}.json`);
+      toast.success('Snapshot exported successfully!');
+    } catch (error) {
+      console.error('Export failed:', error);
+      toast.error('Failed to export snapshot');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const handleImportSnapshot = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setIsImportingSnapshot(true);
+    try {
+      const snapshot = await parseSnapshotFile(file);
+      
+      const db = getDb();
+      const result = await importSnapshot(db.db, snapshot, 'merge');
+      
+      await loadRecipes();
+      toast.success(`Imported ${result.imported} recipes! (${result.skipped} skipped)`);
+    } catch (error) {
+      console.error('Import failed:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to import snapshot');
+    } finally {
+      setIsImportingSnapshot(false);
+      if (event.target) {
+        event.target.value = '';
+      }
+    }
+  };
+
   const handleExportData = async () => {
     setIsExporting(true);
     try {
+      const db = getDb();
       const data = await db.exportData();
       const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
@@ -68,6 +204,7 @@ export default function Settings() {
           throw new Error('Invalid file format');
         }
 
+        const db = getDb();
         await db.importData(data);
         await loadRecipes();
         toast.success(`Imported ${data.recipes.length} recipes successfully!`);
@@ -92,6 +229,7 @@ export default function Settings() {
     setIsClearingData(true);
     try {
       // Get all recipe IDs
+      const db = getDb();
       const allRecipes = await db.getAllRecipes();
       
       // Delete from server (which also clears cache)
@@ -100,7 +238,7 @@ export default function Settings() {
       }
       
       // Clear sessions
-      await db.sessions.clear();
+      await db.db.sessions.clear();
       await loadRecipes();
       toast.success('All data cleared successfully');
     } catch (error) {
@@ -126,6 +264,96 @@ export default function Settings() {
   return (
     <RvLayout title="Settings">
       <div className="max-w-[1200px] mx-auto px-4 md:px-6 py-5 space-y-5">
+        {/* Profile Management */}
+        <div className="bg-white rounded-xl shadow-rv-card p-5">
+          <h2 className="text-lg font-semibold text-rvGray mb-2">Profile Management</h2>
+          <p className="text-sm text-gray-500 mb-4">
+            Create and switch between multiple profiles. Each profile has its own recipes and settings.
+          </p>
+
+          {/* Active Profile */}
+          <div className="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+            <div className="flex items-center space-x-2">
+              <User className="h-5 w-5 text-blue-600" />
+              <div>
+                <div className="font-medium text-rvGray">Current Profile</div>
+                <div className="text-sm text-gray-600">{activeProfile?.label || 'My Profile'}</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Profile List */}
+          {profiles.length > 1 && (
+            <div className="mb-4 space-y-2">
+              <div className="text-sm font-medium text-rvGray">Available Profiles</div>
+              {profiles.map(profile => (
+                <div
+                  key={profile.userId}
+                  className={`flex items-center justify-between p-3 rounded-lg border ${
+                    profile.userId === activeProfile?.userId
+                      ? 'border-blue-500 bg-blue-50'
+                      : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                >
+                  <div className="flex items-center space-x-2">
+                    <User className="h-4 w-4 text-gray-400" />
+                    <span className="text-sm text-rvGray">{profile.label}</span>
+                    {profile.userId === activeProfile?.userId && (
+                      <span className="text-xs text-blue-600 font-medium">(active)</span>
+                    )}
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    {profile.userId !== activeProfile?.userId && (
+                      <>
+                        <button
+                          onClick={() => handleSwitchProfile(profile.userId)}
+                          disabled={isSwitchingProfile}
+                          className="text-sm text-blue-600 hover:text-blue-700 disabled:opacity-50"
+                        >
+                          Switch
+                        </button>
+                        <button
+                          onClick={() => handleDeleteProfile(profile.userId)}
+                          className="text-sm text-red-600 hover:text-red-700"
+                        >
+                          Remove
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Create New Profile */}
+          <div className="border-t border-gray-200 pt-4">
+            <div className="text-sm font-medium text-rvGray mb-2">Create New Profile</div>
+            <div className="flex space-x-2">
+              <input
+                type="text"
+                value={newProfileLabel}
+                onChange={(e) => setNewProfileLabel(e.target.value)}
+                placeholder="Profile name"
+                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-rvAccent focus:border-transparent"
+                onKeyDown={(e) => e.key === 'Enter' && handleCreateProfile()}
+              />
+              <button
+                onClick={handleCreateProfile}
+                disabled={isCreatingProfile || !newProfileLabel.trim()}
+                className="flex items-center space-x-2 px-4 py-2 bg-rvBlue text-white rounded-lg hover:bg-rvBlue/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                {isCreatingProfile ? (
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                ) : (
+                  <UserPlus className="h-4 w-4" />
+                )}
+                <span>Create</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
         {/* Theme Settings */}
         <div className="bg-white rounded-xl shadow-rv-card p-5">
           <h2 className="text-lg font-semibold text-rvGray mb-4">Appearance</h2>
@@ -306,65 +534,130 @@ export default function Settings() {
 
         {/* Data Management */}
         <div className="bg-white rounded-xl shadow-rv-card p-5">
-          <h2 className="text-lg font-semibold text-rvGray mb-4">Data Management</h2>
+          <h2 className="text-lg font-semibold text-rvGray mb-2">Data Management</h2>
+          <p className="text-sm text-gray-500 mb-4">
+            Export and import your recipe data.
+          </p>
           
           <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <span className="text-rvGray">Export Recipes</span>
-                <p className="text-sm text-gray-500">Download all recipes as JSON</p>
+            {/* Snapshot Export/Import */}
+            <div className="border-b border-gray-200 pb-4">
+              <h3 className="text-sm font-semibold text-rvGray mb-3">Profile Snapshot</h3>
+              
+              <div className="flex items-center justify-between mb-3">
+                <div>
+                  <span className="text-rvGray">Export Snapshot</span>
+                  <p className="text-sm text-gray-500">Download current profile's data as JSON</p>
+                </div>
+                <button
+                  onClick={handleExportSnapshot}
+                  disabled={isExporting || recipes.length === 0}
+                  className="flex items-center space-x-2 px-4 py-2 rv-cta-gradient text-white rounded-lg hover:opacity-95 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity"
+                >
+                  {isExporting ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      <span>Exporting...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Download className="h-4 w-4" />
+                      <span>Export</span>
+                    </>
+                  )}
+                </button>
               </div>
-              <button
-                onClick={handleExportData}
-                disabled={isExporting || recipes.length === 0}
-                className="flex items-center space-x-2 px-4 py-2 rv-cta-gradient text-white rounded-lg hover:opacity-95 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity"
-              >
-                {isExporting ? (
-                  <>
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                    <span>Exporting...</span>
-                  </>
-                ) : (
-                  <>
-                    <Download className="h-4 w-4" />
-                    <span>Export</span>
-                  </>
-                )}
-              </button>
+
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className="text-rvGray">Import Snapshot</span>
+                  <p className="text-sm text-gray-500">Upload a profile snapshot (merges with existing data)</p>
+                </div>
+                <label className="flex items-center space-x-2 px-4 py-2 bg-rvBlue text-white rounded-lg hover:bg-rvBlue/90 cursor-pointer transition-colors">
+                  {isImportingSnapshot ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      <span>Importing...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="h-4 w-4" />
+                      <span>Import</span>
+                    </>
+                  )}
+                  <input
+                    ref={snapshotFileInputRef}
+                    type="file"
+                    accept=".json"
+                    onChange={handleImportSnapshot}
+                    disabled={isImportingSnapshot}
+                    className="hidden"
+                  />
+                </label>
+              </div>
             </div>
 
-            <div className="flex items-center justify-between">
-              <div>
-                <span className="text-rvGray">Import Recipes</span>
-                <p className="text-sm text-gray-500">Upload recipes from JSON file</p>
+            {/* Legacy Export/Import */}
+            <div className="border-b border-gray-200 pb-4">
+              <h3 className="text-sm font-semibold text-rvGray mb-3">Legacy Format</h3>
+              
+              <div className="flex items-center justify-between mb-3">
+                <div>
+                  <span className="text-rvGray">Export Recipes (Legacy)</span>
+                  <p className="text-sm text-gray-500">Download all recipes as JSON</p>
+                </div>
+                <button
+                  onClick={handleExportData}
+                  disabled={isExporting || recipes.length === 0}
+                  className="flex items-center space-x-2 px-4 py-2 rv-cta-gradient text-white rounded-lg hover:opacity-95 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity"
+                >
+                  {isExporting ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      <span>Exporting...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Download className="h-4 w-4" />
+                      <span>Export</span>
+                    </>
+                  )}
+                </button>
               </div>
-              <label className="flex items-center space-x-2 px-4 py-2 bg-rvBlue text-white rounded-lg hover:bg-rvBlue/90 cursor-pointer transition-colors">
-                {isImporting ? (
-                  <>
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                    <span>Importing...</span>
-                  </>
-                ) : (
-                  <>
-                    <Upload className="h-4 w-4" />
-                    <span>Import</span>
-                  </>
-                )}
-                <input
-                  type="file"
-                  accept=".json"
-                  onChange={handleImportData}
-                  disabled={isImporting}
-                  className="hidden"
-                />
-              </label>
+
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className="text-rvGray">Import Recipes (Legacy)</span>
+                  <p className="text-sm text-gray-500">Upload recipes from JSON file</p>
+                </div>
+                <label className="flex items-center space-x-2 px-4 py-2 bg-rvBlue text-white rounded-lg hover:bg-rvBlue/90 cursor-pointer transition-colors">
+                  {isImporting ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      <span>Importing...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="h-4 w-4" />
+                      <span>Import</span>
+                    </>
+                  )}
+                  <input
+                    type="file"
+                    accept=".json"
+                    onChange={handleImportData}
+                    disabled={isImporting}
+                    className="hidden"
+                  />
+                </label>
+              </div>
             </div>
 
             <div className="border-t border-gray-200 pt-4">
               <div className="flex items-center justify-between">
                 <div>
                   <span className="text-red-700">Clear All Data</span>
-                  <p className="text-sm text-gray-500">Delete all recipes and sessions</p>
+                  <p className="text-sm text-gray-500">Delete all recipes and sessions from current profile</p>
                 </div>
                 <button
                   onClick={handleClearAllData}
@@ -394,10 +687,11 @@ export default function Settings() {
           
           <div className="space-y-2 text-sm text-gray-600">
             <p><strong>Version:</strong> 1.0.0</p>
+            <p><strong>Active Profile:</strong> {activeProfile?.label || 'My Profile'}</p>
             <p><strong>Recipes:</strong> {recipes.length}</p>
-            <p><strong>Storage:</strong> Server + Offline Cache</p>
+            <p><strong>Storage:</strong> Multi-Profile + Server Sync</p>
             <p className="text-xs text-gray-500 mt-2">
-              Your recipes sync to the server and are cached locally for offline use.
+              Each profile has its own recipes and settings. Data syncs to the server and is cached locally for offline use.
             </p>
           </div>
         </div>

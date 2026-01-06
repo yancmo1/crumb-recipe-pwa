@@ -13,6 +13,7 @@ const EditRecipe = lazy(() => import('./pages/EditRecipe'));
 import { registerSW } from 'virtual:pwa-register';
 import { isNativePlatform } from './utils/nativeLocalNotifications.ts';
 import { getHasSeenWelcome } from './utils/welcome';
+import { initializeDatabase } from './initDatabase';
 
 // Register service worker
 let updateSW: ((reloadPage?: boolean) => Promise<void>) | undefined;
@@ -62,6 +63,7 @@ if ('serviceWorker' in navigator && !isNativePlatform()) {
 function App() {
   const loadRecipes = useRecipeStore((state) => state.loadRecipes);
   const didInitialLoad = useRef(false);
+  const [dbInitialized, setDbInitialized] = useState(false);
 
   const WelcomeGate = () => {
     const [hasSeen, setHasSeen] = useState<boolean | null>(null);
@@ -79,12 +81,24 @@ function App() {
   };
 
   useEffect(() => {
+    // Initialize multi-user database system first
+    initializeDatabase()
+      .then(() => {
+        setDbInitialized(true);
+      })
+      .catch((error) => {
+        console.error('Failed to initialize database:', error);
+        toast.error('Failed to initialize app. Please refresh the page.');
+      });
+  }, []);
+
+  useEffect(() => {
     // In React 18 StrictMode (dev), effects run twice.
     // Guard to avoid duplicate network calls + duplicated console noise.
-    if (didInitialLoad.current) return;
+    if (didInitialLoad.current || !dbInitialized) return;
     didInitialLoad.current = true;
     loadRecipes();
-  }, [loadRecipes]);
+  }, [loadRecipes, dbInitialized]);
 
   // Periodically check for a new service worker so installed PWAs update promptly.
   // Note: browsers still control SW update timing; this just nudges checks.
@@ -128,6 +142,17 @@ function App() {
       document.removeEventListener('visibilitychange', onVisibility);
     };
   }, []);
+
+  // Don't render routes until database is initialized
+  if (!dbInitialized) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-lg text-gray-600">Initializing...</div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">

@@ -125,6 +125,18 @@ export type ExportData = {
   version: string;
 };
 
+// Multi-user profile types
+export type Profile = {
+  userId: string;
+  label: string;
+  createdAt: number;
+};
+
+export type ProfileRegistry = {
+  profiles: Profile[];
+  activeUserId: string | null;
+};
+
 // Theme types
 export type Theme = 'light' | 'dark' | 'system';
 
