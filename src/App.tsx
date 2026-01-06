@@ -10,54 +10,14 @@ const About = lazy(() => import('./pages/About'));
 const StyleGuide = lazy(() => import('./pages/StyleGuide'));
 import Home from './pages/Home';
 const EditRecipe = lazy(() => import('./pages/EditRecipe'));
-import { registerSW } from 'virtual:pwa-register';
 import { isNativePlatform } from './utils/nativeLocalNotifications.ts';
 import { getHasSeenWelcome } from './utils/welcome';
 import { initializeDatabase } from './initDatabase';
+import { checkForPwaUpdates, initPwaUpdateFlow } from './pwa/updates';
 
-// Register service worker
-let updateSW: ((reloadPage?: boolean) => Promise<void>) | undefined;
-let updateToastShown = false;
-
-if ('serviceWorker' in navigator && !isNativePlatform()) {
-  updateSW = registerSW({
-    onNeedRefresh() {
-      // Common practice: inform the user and let them choose when to reload.
-      // (Avoid surprise reloads mid-cook.)
-      if (updateToastShown) return;
-      updateToastShown = true;
-
-      toast('Update available', {
-        description: 'A newer version of CrumbWorks is ready. Reload to apply it.',
-        duration: Infinity,
-        action: {
-          label: 'Reload',
-          onClick: async () => {
-            updateToastShown = false;
-            try {
-              await updateSW?.(true);
-            } catch {
-              // If reload fails for some reason, at least don't get stuck.
-              window.location.reload();
-            }
-          }
-        },
-        cancel: {
-          label: 'Later',
-          onClick: () => {
-            updateToastShown = false;
-          }
-        }
-      });
-    },
-    onOfflineReady() {
-      // Helpful for first install; keep it quiet after that.
-      console.log('App ready to work offline');
-    },
-    onRegisterError(error) {
-      console.warn('Service worker registration error:', error);
-    }
-  });
+// Register service worker update flow
+if (!isNativePlatform()) {
+  initPwaUpdateFlow();
 }
 
 function App() {
@@ -103,22 +63,10 @@ function App() {
   // Periodically check for a new service worker so installed PWAs update promptly.
   // Note: browsers still control SW update timing; this just nudges checks.
   useEffect(() => {
-    if (!updateSW) return;
-
     const checkForUpdates = () => {
-      // `virtual:pwa-register`'s update function is typed as returning a Promise,
-      // but in some setups it can effectively return void at runtime.
-      // Guard before calling `.catch()` to avoid crashes.
-      try {
-        const maybePromise = updateSW(false) as unknown;
-        if (maybePromise && typeof (maybePromise as any).catch === 'function') {
-          (maybePromise as any).catch(() => {
-            // Ignore update check errors (offline / transient)
-          });
-        }
-      } catch {
+      checkForPwaUpdates().catch(() => {
         // Ignore update check errors (offline / transient)
-      }
+      });
     };
 
     // Check shortly after app loads (helps right after deploy)

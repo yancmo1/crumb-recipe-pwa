@@ -8,6 +8,7 @@ import { listProfiles, getActiveProfile, createProfile, setActiveProfile, delete
 import { reinitializeForProfile } from '../initDatabase';
 import { exportSnapshot, importSnapshot, downloadSnapshot, parseSnapshotFile } from '../sharing/snapshot';
 import type { Profile } from '../types';
+import { checkForPwaUpdates } from '../pwa/updates';
 
 export default function Settings() {
   const {
@@ -44,6 +45,8 @@ export default function Settings() {
   const [overrideIngredientKey, setOverrideIngredientKey] = useState('');
   const [overrideUnit, setOverrideUnit] = useState('');
   const [overrideGramsPerUnit, setOverrideGramsPerUnit] = useState('');
+
+  const [isCheckingForUpdates, setIsCheckingForUpdates] = useState(false);
 
   const refreshProfiles = () => {
     setProfiles(listProfiles());
@@ -259,6 +262,15 @@ export default function Settings() {
     setOverrideUnit('');
     setOverrideGramsPerUnit('');
     toast.success('Conversion override saved');
+  };
+
+  const handleCheckForUpdates = async () => {
+    setIsCheckingForUpdates(true);
+    try {
+      await checkForPwaUpdates({ showNoUpdateToast: true });
+    } finally {
+      setIsCheckingForUpdates(false);
+    }
   };
 
   return (
@@ -687,6 +699,23 @@ export default function Settings() {
           
           <div className="space-y-2 text-sm text-gray-600">
             <p><strong>Version:</strong> 1.0.0</p>
+            <div className="pt-2">
+              <button
+                type="button"
+                onClick={handleCheckForUpdates}
+                disabled={isCheckingForUpdates}
+                className="inline-flex items-center space-x-2 px-4 py-2 bg-rvBlue text-white rounded-lg hover:bg-rvBlue/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                {isCheckingForUpdates ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    <span>Checking…</span>
+                  </>
+                ) : (
+                  <span>Check for updates</span>
+                )}
+              </button>
+            </div>
             <p><strong>Active Profile:</strong> {activeProfile?.label || 'My Profile'}</p>
             <p><strong>Recipes:</strong> {recipes.length}</p>
             <p><strong>Storage:</strong> Multi-Profile + Server Sync</p>
