@@ -46,11 +46,29 @@ export default function ImportRecipe() {
   useEffect(() => {
     const sharedUrl = searchParams.get('url');
     if (sharedUrl) {
-      setUrl(sharedUrl);
+      // Validate and set the shared URL
+      try {
+        const normalized = normalizeRecipeUrl(sharedUrl);
+        setUrl(normalized);
+      } catch (error) {
+        // If validation fails, set raw URL and let user fix it
+        setUrl(sharedUrl);
+        const message = error instanceof Error ? error.message : String(error);
+        toast.error(`Shared URL may be invalid: ${message}`);
+      }
+      
       // Clear the URL parameter to avoid re-importing on page refresh
+      // Only navigate if there are no other params, otherwise just use replaceState
       const newSearchParams = new URLSearchParams(searchParams);
       newSearchParams.delete('url');
-      navigate(`/import?${newSearchParams.toString()}`, { replace: true });
+      const remaining = newSearchParams.toString();
+      
+      if (remaining) {
+        navigate(`/import?${remaining}`, { replace: true });
+      } else {
+        // Use replaceState to avoid unnecessary React Router navigation
+        window.history.replaceState({}, '', '/import');
+      }
     }
   }, [searchParams, navigate]);
 
