@@ -313,7 +313,7 @@ function extractIngredientsWithGroups($) {
       
       // Stop at common non-ingredient sections (tips, notes, serving suggestions, shopping links, etc.)
       // Use word boundaries and common variations
-      if (/\b(tips?|notes?|servings?|must try|shop|nutrition|storage|substitutions?|variations?|faqs?|videos?|equipments?|tools?|equipment needed)\b/i.test(headerText)) {
+      if (/\b(tips?|notes?|servings?|must try|shop|nutrition|storage|substitutions?|variations?|faqs?|videos?|equipments?|tools?)\b/i.test(headerText)) {
         break;
       }
       

@@ -162,7 +162,9 @@ export function computeRecipeMetrics(recipe) {
     ? nonHeaderSteps.reduce((sum, s) => sum + String(s).length, 0) / nonHeaderSteps.length
     : 0;
 
-  // Compute ingredient quality: how many ingredients have structured data (amount/unit)?
+  // Compute ingredient quality: how many ingredients have structured data (amount OR unit)?
+  // Note: We accept either amount or unit as "structured" because some ingredients like
+  // "salt to taste" have a unit but no amount, and that's still more structured than just "salt"
   const ingredients = Array.isArray(recipe?.ingredients) ? recipe.ingredients : [];
   const nonHeaderIngredients = ingredients.filter(ing => !ing?.isGroupHeader);
   const structuredIngredients = nonHeaderIngredients.filter(ing => 
