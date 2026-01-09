@@ -5,6 +5,7 @@ A mobile-first Progressive Web App for managing and cooking from recipes offline
 ## Features
 
 - 🍳 **Import recipes by URL** - Automatically extracts ingredients, steps, and metadata from recipe websites
+- 📤 **Share to CrumbWorks** - Share recipe URLs directly from your browser to CrumbWorks (when installed as PWA)
 - 📱 **Mobile-first PWA** - Optimized for iPhone Safari with proper PWA support
 - 🔄 **Recipe scaling** - Scale ingredients with clean fraction display (½×, 1.5×, 2×, etc.)
 - ✅ **Cook mode** - Check off ingredients and steps with temporary session persistence (72h TTL)
@@ -113,10 +114,21 @@ docker compose -f docker-compose.dev.yml down
 
 ### Importing Recipes
 
+#### Method 1: Manual URL Import
 1. Click the "+" button on the home screen
 2. Paste a recipe URL (supports most cooking sites)
 3. The app will extract ingredients, steps, images, and metadata
 4. Recipe is stored locally for offline access
+
+#### Method 2: Share from Browser (PWA only)
+1. Install CrumbWorks as a PWA on your device
+2. Browse to any recipe webpage
+3. Tap the Share button in your browser
+4. Select "CrumbWorks" from the share menu
+5. The recipe URL will be automatically populated in the import page
+6. Tap "Import Recipe" to complete the import
+
+**Note:** The Web Share Target feature requires CrumbWorks to be installed as a PWA. On iOS, use Safari's "Add to Home Screen" option. On Android Chrome, use "Install app" or "Add to Home screen".
 
 ### Cooking Mode
 

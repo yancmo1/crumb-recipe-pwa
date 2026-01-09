@@ -61,6 +61,14 @@ export default defineConfig(function () {
                             type: 'image/png',
                         },
                     ],
+                    share_target: {
+                        action: '/import',
+                        method: 'GET',
+                        enctype: 'application/x-www-form-urlencoded',
+                        params: {
+                            url: 'url',
+                        },
+                    },
                 },
             }),
         ],

@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Link2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useRecipeStore } from '../state/session';
@@ -8,6 +8,7 @@ import { RvLayout } from '../components/RvLayout';
 import { normalizeRecipeUrl } from '../utils/url';
 
 export default function ImportRecipe() {
+  const [searchParams] = useSearchParams();
   const [url, setUrl] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
@@ -40,6 +41,36 @@ export default function ImportRecipe() {
       setIsLoading(false);
     }
   };
+
+  // Handle URL from Web Share Target
+  useEffect(() => {
+    const sharedUrl = searchParams.get('url');
+    if (sharedUrl) {
+      // Validate and set the shared URL
+      try {
+        const normalized = normalizeRecipeUrl(sharedUrl);
+        setUrl(normalized);
+      } catch (error) {
+        // If validation fails, set raw URL and let user fix it
+        setUrl(sharedUrl);
+        const message = error instanceof Error ? error.message : String(error);
+        toast.error(`Shared URL may be invalid: ${message}`);
+      }
+      
+      // Clear the URL parameter to avoid re-importing on page refresh
+      // Only navigate if there are no other params, otherwise just use replaceState
+      const newSearchParams = new URLSearchParams(searchParams);
+      newSearchParams.delete('url');
+      const remaining = newSearchParams.toString();
+      
+      if (remaining) {
+        navigate(`/import?${remaining}`, { replace: true });
+      } else {
+        // Use replaceState to avoid unnecessary React Router navigation
+        window.history.replaceState({}, '', '/import');
+      }
+    }
+  }, [searchParams, navigate]);
 
   return (
     <RvLayout title="Import">
