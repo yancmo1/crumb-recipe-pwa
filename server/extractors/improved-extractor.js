@@ -302,13 +302,22 @@ function extractIngredientsWithGroups($) {
   while (currentNode.length > 0 && guard < 50) {
     const tagName = currentNode.prop('tagName');
     
-    // Stop at instructions section
+    // Check if this is a header and handle stop conditions
     if (/^H[1-6]$/i.test(tagName)) {
       const headerText = currentNode.text().toLowerCase();
+      
+      // Stop at instruction sections
       if (/instruction|method|direction|step|preparation|how to|recipe/i.test(headerText)) {
         break;
       }
-      // This is a subsection header (e.g., "For the dough")
+      
+      // Stop at common non-ingredient sections (tips, notes, serving suggestions, shopping links, etc.)
+      // Use word boundaries and common variations
+      if (/\b(tips?|notes?|servings?|must try|shop|nutrition|storage|substitutions?|variations?|faqs?|videos?|equipments?|tools?|equipment needed)\b/i.test(headerText)) {
+        break;
+      }
+      
+      // This is a legitimate subsection header (e.g., "For the dough", "For the filling")
       const subheading = currentNode.text().trim();
       if (subheading && subheading.length < 60) {
         ingredients.push(`**${subheading}:**`);
