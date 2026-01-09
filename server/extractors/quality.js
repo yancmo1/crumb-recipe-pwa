@@ -162,11 +162,24 @@ export function computeRecipeMetrics(recipe) {
     ? nonHeaderSteps.reduce((sum, s) => sum + String(s).length, 0) / nonHeaderSteps.length
     : 0;
 
+  // Compute ingredient quality: how many ingredients have structured data (amount OR unit)?
+  // Note: We accept either amount or unit as "structured" because some ingredients like
+  // "salt to taste" have a unit but no amount, and that's still more structured than just "salt"
+  const ingredients = Array.isArray(recipe?.ingredients) ? recipe.ingredients : [];
+  const nonHeaderIngredients = ingredients.filter(ing => !ing?.isGroupHeader);
+  const structuredIngredients = nonHeaderIngredients.filter(ing => 
+    ing && (ing.amount !== undefined || ing.unit !== undefined)
+  );
+  const ingredientStructureRatio = nonHeaderIngredients.length > 0
+    ? structuredIngredients.length / nonHeaderIngredients.length
+    : 0;
+
   return {
     titleLen,
     ingredientsCount,
     stepsCount,
     avgStepLength,
+    ingredientStructureRatio,
     hasImage: !!recipe?.image,
     hasAuthor: !!recipe?.author,
     hasTimes: !!recipe?.times && Object.keys(recipe.times).length > 0,
@@ -184,6 +197,16 @@ export function scoreRecipeCandidate(recipe) {
 
   // Ingredients
   score += Math.min(35, m.ingredientsCount * 3.5);
+
+  // Bonus for structured ingredients (with amounts/units)
+  // This helps prefer "2 cups flour" over just "flour"
+  if (m.ingredientStructureRatio >= 0.7) {
+    score += 8; // Most ingredients have structure
+  } else if (m.ingredientStructureRatio >= 0.4) {
+    score += 4; // Some ingredients have structure
+  } else if (m.ingredientStructureRatio < 0.1 && m.ingredientsCount >= 3) {
+    score -= 5; // Almost no ingredients have structure - likely a summary list
+  }
 
   // Steps
   score += Math.min(35, m.stepsCount * 3.5);
